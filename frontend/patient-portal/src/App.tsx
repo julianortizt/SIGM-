@@ -250,6 +250,7 @@ export default function App() {
           </form>
           <p className="auth-alt"><a href="#" onClick={e => { e.preventDefault(); setRecover(true); setError(''); }}>¿Olvidó su contraseña?</a></p>
           <p className="auth-alt">La activación de cuentas la gestiona su clínica o consultorio.</p>
+          <p className="auth-alt"><a href="/">← Volver al inicio</a></p>
           </>}
         </div>
       </main>

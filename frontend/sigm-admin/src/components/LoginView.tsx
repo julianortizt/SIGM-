@@ -206,6 +206,9 @@ export default function LoginView({ onLogin }: { onLogin: (session: Session) => 
               ¿Olvidó su contraseña?
             </a>
           </p>
+          <p className="auth-alt">
+            <a href="/">← Volver al inicio</a>
+          </p>
           </>}
 
           {mode === 'forgot' && <>

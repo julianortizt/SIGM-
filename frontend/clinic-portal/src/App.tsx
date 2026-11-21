@@ -5,6 +5,7 @@ import PatientPicker from './components/PatientPicker';
 import SecurityModal from './components/SecurityModal';
 import PasswordRecovery from './components/PasswordRecovery';
 import { openClinicalRecordPdf, printClinicalRecord } from './clinicalRecord';
+import ClinicalHistoryDrawer from './ClinicalHistoryDrawer';
 
 type View = 'login' | 'register' | 'dashboard';
 type Tab = 'home'|'specialties'|'users'|'sites'|'offices'|'professionals'|'schedules'|'patients'|'appointments'|'waiting'|'reminders'|'encounters'|'clinical'|'lab'|'prescriptions'|'billing'|'eps'|'documents'|'interop'|'audit';
@@ -151,6 +152,7 @@ export default function App() {
   const [copied, setCopied] = useState(false);
   const patQInit = useRef(true);
   const [showSuperadmin, setShowSuperadmin] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [showSecurity, setShowSecurity] = useState(false);
   const [recovering, setRecovering] = useState(false);
   const [showSidebar, setShowSidebar] = useState(true); /* true por defecto en desktop, false en móvil inicial */
@@ -333,6 +335,7 @@ export default function App() {
             </form>
             <p className="auth-alt">¿Primera vez? <a href="#" onClick={e => { e.preventDefault(); setView('register'); api.specialties().then(setSpecialties).catch(() => {}); }}>Cree la cuenta de su clínica</a></p>
             <p className="auth-alt"><a href="#" onClick={e => { e.preventDefault(); setRecovering(true); setError(''); }}>¿Olvidó su contraseña?</a></p>
+            <p className="auth-alt"><a href="/">← Volver al inicio</a></p>
           </>) : <>
             <h2>Crear organización</h2>
             <p className="sub">Registre su clínica y configure el administrador inicial.</p>
@@ -430,6 +433,7 @@ export default function App() {
               <Ico name="copy" size={11} /> {copied ? 'Copiado' : 'Copiar'}
             </button>
           </span>
+          {can('clinical.read') && <button className="btn ghost sm" title="Ver el histórico clínico del paciente desde cualquier módulo" onClick={() => setShowHistory(true)}><Ico name="clipboard" size={14} /> Historia clínica</button>}
           {session?.permissions?.includes('platform.tenants.manage') && (
             <button className="btn ghost sm" title="Panel superadmin" onClick={() => setShowSuperadmin(true)}><Ico name="shield" size={14} /> Soporte</button>
           )}
@@ -1236,6 +1240,14 @@ export default function App() {
         </section>}
       </div>
     </div>
+
+    <ClinicalHistoryDrawer
+      open={showHistory}
+      onClose={() => setShowHistory(false)}
+      patients={patients}
+      initialPatientId={summaryPatient}
+      onOpenClinical={(pid) => { setSummaryPatient(pid); setTab('clinical'); }}
+    />
   </div>;
 }
 

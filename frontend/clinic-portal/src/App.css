@@ -432,3 +432,81 @@ th.num { text-align: right; }
   .content { padding: 18px 16px 40px; }
   .topbar { padding: 0 16px; }
 }
+
+/* ---------- Historia clínica global (drawer disponible en todos los módulos) ---------- */
+.ch-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(13, 27, 38, .46); backdrop-filter: blur(2px);
+}
+.ch-drawer {
+  position: absolute; inset: 0 0 0 auto; width: min(700px, 100vw); height: 100%;
+  display: flex; flex-direction: column; background: var(--surface);
+  box-shadow: -14px 0 44px rgba(16, 24, 40, .24);
+}
+.ch-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px; border-bottom: 1px solid var(--line); flex: none;
+}
+.ch-head h3 { font-size: 17px; }
+.ch-kicker {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--accent-strong); margin-bottom: 2px;
+}
+.ch-body { flex: 1; overflow-y: auto; padding: 16px 20px 30px; }
+.ch-picker { position: relative; }
+.ch-options {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 5;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow); max-height: 260px; overflow: auto;
+}
+.ch-options button {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%;
+  padding: 9px 12px; border: 0; border-bottom: 1px solid var(--line-soft); background: none;
+  font: 500 13px var(--font); color: var(--ink); text-align: left; cursor: pointer;
+}
+.ch-options button:last-child { border-bottom: 0; }
+.ch-options button:hover { background: var(--accent-soft); }
+.ch-options small { color: var(--muted); font-size: 11.5px; }
+.ch-patient-card {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm); background: #fbfcfe;
+}
+.ch-patient-card b { font-size: 14px; }
+.ch-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.ch-alert { display: block !important; }
+.ch-filter-bar { display: grid; gap: 10px; margin-top: 16px; }
+.ch-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ch-chips .chip { padding: 5px 10px; font-size: 12px; }
+.ch-chips .chip small {
+  font-size: 10.5px; font-weight: 700; color: var(--muted);
+  background: var(--slate-bg); border-radius: 999px; padding: 1px 6px;
+}
+.ch-chips .chip.on small { background: var(--surface); color: var(--accent-strong); }
+.ch-chips .chip:disabled { opacity: .45; cursor: not-allowed; }
+.ch-search { max-width: none; }
+.ch-group { margin-top: 18px; }
+.ch-month {
+  display: flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--muted);
+  padding-bottom: 8px; border-bottom: 1px solid var(--line-soft);
+}
+.ch-month span {
+  background: var(--slate-bg); color: var(--slate); border-radius: 999px;
+  padding: 1px 7px; font-size: 10.5px; letter-spacing: 0;
+}
+.ch-timeline { margin-top: 14px; }
+.ch-timeline .tl-item { padding-bottom: 14px; }
+.ch-kind { color: var(--accent-strong); font-weight: 700; letter-spacing: 0; text-transform: none; }
+.ch-badge { margin-left: 8px; font-size: 10px; padding: 1px 7px; }
+.ch-meta { margin-top: 3px; font-size: 11.5px; color: var(--accent-strong); font-weight: 600; }
+.tl-item.tl-red::before { border-color: var(--red); }
+.tl-item.tl-slate::before { border-color: var(--slate); }
+.ch-foot {
+  margin-top: 22px; padding-top: 12px; border-top: 1px solid var(--line-soft);
+  font-size: 11px; color: var(--muted);
+}
+@media (max-width: 640px) {
+  .ch-drawer { width: 100vw; }
+  .ch-body { padding: 14px 14px 26px; }
+}

@@ -184,12 +184,12 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         }
         s.GeneratedBy = User.FindFirst("name")?.Value ?? User.Identity?.Name ?? "Usuario SIGM";
 
-        await using (var cmd = new NpgsqlCommand("SELECT allergen,allergen_type,reaction,severity,status FROM sigm.allergies WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC", c))
+        await using (var cmd = new NpgsqlCommand("SELECT allergen,allergen_type,reaction,severity,status,created_at FROM sigm.allergies WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
             while (await rd.ReadAsync(ct))
-                s.Allergies.Add(new AllergyRow(rd.GetString(0), rd.GetString(1), rd.IsDBNull(2) ? null : rd.GetString(2), rd.GetString(3), rd.GetString(4)));
+                s.Allergies.Add(new AllergyRow(rd.GetString(0), rd.GetString(1), rd.IsDBNull(2) ? null : rd.GetString(2), rd.GetString(3), rd.GetString(4), rd.GetFieldValue<DateTimeOffset>(5)));
         }
 
         await using (var cmd = new NpgsqlCommand(@"SELECT dc.code,dc.description,d.diagnosis_type,d.certainty,d.created_at
@@ -202,12 +202,12 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
                 s.Diagnoses.Add(new DiagnosisRow(rd.GetString(0), rd.GetString(1), rd.GetString(2), rd.GetString(3), rd.GetFieldValue<DateTimeOffset>(4)));
         }
 
-        await using (var cmd = new NpgsqlCommand("SELECT history_type,description,onset_date,status FROM sigm.medical_history WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC LIMIT 100", c))
+        await using (var cmd = new NpgsqlCommand("SELECT history_type,description,onset_date,status,created_at FROM sigm.medical_history WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC LIMIT 100", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
             while (await rd.ReadAsync(ct))
-                s.History.Add(new HistoryRow(rd.GetString(0), rd.GetString(1), rd.IsDBNull(2) ? null : rd.GetFieldValue<DateOnly>(2), rd.GetString(3)));
+                s.History.Add(new HistoryRow(rd.GetString(0), rd.GetString(1), rd.IsDBNull(2) ? null : rd.GetFieldValue<DateOnly>(2), rd.GetString(3), rd.GetFieldValue<DateTimeOffset>(4)));
         }
 
         await using (var cmd = new NpgsqlCommand(@"SELECT measured_at,temperature_c,heart_rate,respiratory_rate,systolic_bp,diastolic_bp,oxygen_saturation,weight_kg,height_cm,bmi
@@ -235,7 +235,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         }
 
         var notesByEncounter = new Dictionary<Guid, List<ClinicalNoteRow>>();
-        await using (var cmd = new NpgsqlCommand(@"SELECT n.id,n.encounter_id,n.note_type,n.status,n.current_version,n.signed_at,v.content
+        await using (var cmd = new NpgsqlCommand(@"SELECT n.id,n.encounter_id,n.note_type,n.status,n.current_version,n.signed_at,v.content,n.created_at
                 FROM sigm.clinical_notes n
                 LEFT JOIN sigm.clinical_note_versions v ON v.note_id=n.id AND v.tenant_id=n.tenant_id AND v.version_number=n.current_version
                 WHERE n.tenant_id=@t AND n.patient_id=@p ORDER BY n.created_at", c))
@@ -245,7 +245,8 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
             while (await rd.ReadAsync(ct))
             {
                 var note = new ClinicalNoteRow(rd.GetGuid(0), rd.GetString(2), rd.GetString(3), rd.GetInt32(4),
-                    rd.IsDBNull(5) ? null : rd.GetFieldValue<DateTimeOffset>(5), FlattenJson(rd.IsDBNull(6) ? null : rd.GetString(6)));
+                    rd.IsDBNull(5) ? null : rd.GetFieldValue<DateTimeOffset>(5), FlattenJson(rd.IsDBNull(6) ? null : rd.GetString(6)),
+                    rd.GetFieldValue<DateTimeOffset>(7));
                 var encId = rd.GetGuid(1);
                 if (!notesByEncounter.TryGetValue(encId, out var list)) notesByEncounter[encId] = list = new List<ClinicalNoteRow>();
                 list.Add(note);
@@ -422,9 +423,9 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         public bool IsActive { get; set; }
     }
 
-    public sealed record AllergyRow(string Allergen, string AllergenType, string? Reaction, string Severity, string Status);
+    public sealed record AllergyRow(string Allergen, string AllergenType, string? Reaction, string Severity, string Status, DateTimeOffset CreatedAt);
     public sealed record DiagnosisRow(string Code, string Description, string DiagnosisType, string Certainty, DateTimeOffset CreatedAt);
-    public sealed record HistoryRow(string HistoryType, string Description, DateOnly? OnsetDate, string Status);
+    public sealed record HistoryRow(string HistoryType, string Description, DateOnly? OnsetDate, string Status, DateTimeOffset CreatedAt);
     public sealed record VitalRow(DateTimeOffset MeasuredAt, decimal? TemperatureC, int? HeartRate, int? RespiratoryRate, int? SystolicBp, int? DiastolicBp, decimal? OxygenSaturation, decimal? WeightKg, decimal? HeightCm, decimal? Bmi);
 
     public sealed class EncounterRow(Guid id, DateTimeOffset encounterDate, string encounterType, string status, string? chiefComplaint, string? professionalName, string? specialtyName)
@@ -439,7 +440,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         public List<ClinicalNoteRow> Notes { get; } = new();
     }
 
-    public sealed class ClinicalNoteRow(Guid id, string noteType, string status, int currentVersion, DateTimeOffset? signedAt, string content)
+    public sealed class ClinicalNoteRow(Guid id, string noteType, string status, int currentVersion, DateTimeOffset? signedAt, string content, DateTimeOffset createdAt)
     {
         public Guid Id { get; } = id;
         public string NoteType { get; } = noteType;
@@ -447,6 +448,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         public int CurrentVersion { get; } = currentVersion;
         public DateTimeOffset? SignedAt { get; } = signedAt;
         public string Content { get; } = content;
+        public DateTimeOffset CreatedAt { get; } = createdAt;
         public List<AmendmentRow> Amendments { get; } = new();
     }
 

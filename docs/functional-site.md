@@ -102,6 +102,15 @@ cd frontend/patient-portal;  npm run dev   # http://localhost:5175
 5. **Historia clínica (PDF)** abre el snapshot oficial (JSON/PDF con hash SHA-256 en `X-Document-Sha256`); **Imprimir** genera el mismo contenido en una ventana de impresión.
 6. La firma de una nota crea una nueva versión firmada e inmutable y cambia su estado a `SIGNED`, cumpliendo el guard `sigm.fn_clinical_note_sign_guard()`. Las notas firmadas se corrigen con **adendas**, no se sobrescriben.
 
+### Histórico clínico global (disponible en todos los módulos)
+
+- En la barra superior de **`/consultorios/`** y **`/app/`** existe el botón **Historia clínica** (visible para usuarios con `clinical.read`). Se puede abrir desde cualquier módulo: Inicio, Agenda, Atenciones, Laboratorio, Facturación, Documentos, etc.
+- El panel lateral muestra la **línea de tiempo completa** del paciente, agrupada por mes y ordenada de más reciente a más antigua: atenciones, notas (con estado de firma y adendas), diagnósticos CIE-10, signos vitales, alergias, antecedentes, fórmulas médicas y resultados de laboratorio.
+- Incluye filtros por tipo de evento y buscador de texto, selector de paciente (recuerda el último seleccionado), alertas de alergias, acceso al **PDF oficial con hash SHA-256**, **Imprimir** y el enlace **Abrir en Clínico**.
+- La vista se alimenta del mismo snapshot que el PDF (`GET /api/v1/patients/{id}/clinical-record`), por lo que no hay dos versiones distintas de la historia.
+
+> **Login:** las cuatro pantallas de acceso (consultorios, clínicas, pacientes y consola admin) incluyen el enlace **← Volver al inicio**, que lleva a la portada `https://hcmmedical.vercel.app/`.
+
 > **Especialidades:** `GET/PUT /api/v1/specialties/tenant` requiere `tenant.specialties.read` / `tenant.specialties.manage`. `PHYSICIAN` no posee esos permisos, por lo que en `/consultorios/` el menú «Especialidades» no aparece para el médico y la acción de guardado queda deshabilitada. Para habilitar especialidades se debe ingresar con `admin@demo.sigm.local` (rol `CLINIC_ADMIN`, con ambos permisos) en `/app/`. Los roles válidos en el formulario de usuarios son los del catálogo (`PHYSICIAN`, `NURSE`, `RECEPTIONIST`, `BILLER`, `MEDICAL_DIRECTOR`, `LAB_STAFF`, `CLINIC_ADMIN`, `PRACTICE_OWNER`); los antiguos `DOCTOR`, `BILLING` y `TENANT_ADMIN` no existen y hacen fallar el alta.
 
 ### Panel superadmin oculto (soporte SaaS)

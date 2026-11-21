@@ -46,10 +46,7 @@ function table(headers: string[], rows: string[][]): string {
     .join('')}</tbody></table>`;
 }
 
-/**
- * Imprime la historia clínica con el mismo contenido del PDF oficial.
- * Abre una ventana con estilos de impresión y lanza el diálogo del navegador.
- */
+/** Imprime la historia clínica con el mismo contenido del PDF oficial. */
 export async function printClinicalRecord(patientId: string) {
   const snapshot = await api.clinicalRecord(patientId);
   const patient = snapshot.patient ?? {};
