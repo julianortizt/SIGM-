@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import './App.css';
-import { api, clearSession, getSession, setSession } from './api';
+import { API, api, clearSession, getSession, setSession } from './api';
 import PatientPicker from './components/PatientPicker';
 import SecurityModal from './components/SecurityModal';
 import PasswordRecovery from './components/PasswordRecovery';
@@ -165,7 +165,7 @@ export default function App() {
         if (!token) return;
         const h = new Headers({ 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' });
         const t = localStorage.getItem('sigm_tenant'); if (t) h.append('X-Tenant-Id', t);
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/api/v1/tenant-config/dashboard`, { method: 'GET', headers: h });
+        const res = await fetch(`${API}/api/v1/tenant-config/dashboard`, { method: 'GET', headers: h });
         const data = await res.json();
         const hidden = (data?.hidden ?? []).filter((x: any) => typeof x === 'string');
         setHiddenModules(hidden);

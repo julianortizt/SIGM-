@@ -1,4 +1,6 @@
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Las rutas ya empiezan por /api/v1; si VITE_API_URL termina en /api se quita
+// para no generar /api/api/v1 (404 en Vercel).
+export const API = (import.meta.env.VITE_API_URL || 'http://localhost:5000').replace(/\/api\/?$/, '');
 
 export type LoginResponse = { accessToken: string; expiresAt: string; userId: string; tenantId?: string; fullName: string; permissions: string[]; requiresTenantSelection?: boolean; tenants?: string[] };
 export function getToken() { return localStorage.getItem('sigm_token'); }

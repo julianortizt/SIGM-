@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5067";
+// Las rutas ya incluyen /api/v1: si VITE_API_URL termina en /api, se recorta.
+const API = (import.meta.env.VITE_API_URL || "http://localhost:5067").replace(/\/api\/?$/, "");
 
 const DEFAULT_TITLE = "¡Bienvenido a SIGM Cloud!";
 const DEFAULT_MESSAGE =
