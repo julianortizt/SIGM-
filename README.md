@@ -7,6 +7,20 @@ Plataforma SaaS multi-tenant para gestión médica (Colombia). Núcleo compartid
 - **SIGM Welcome** (`frontend/sigm-welcome`) — sitio público / landing
 - **SIGM Admin** (`frontend/sigm-admin`) — panel de plataforma (superadmin)
 
+## Accesos en producción
+Sitio funcionando en **https://hcmmedical.vercel.app** (un solo proyecto Vercel + Neon; sin dominio propio ni subdominios):
+
+| Portal | URL |
+|---|---|
+| Landing / bienvenida | https://hcmmedical.vercel.app/ |
+| SIGM Clínicas | https://hcmmedical.vercel.app/app/ |
+| SIGM Consultorios | https://hcmmedical.vercel.app/consultorios/ |
+| Portal Pacientes | https://hcmmedical.vercel.app/pacientes/ |
+| Consola Admin | https://hcmmedical.vercel.app/admin/ |
+| Salud / API | https://hcmmedical.vercel.app/health/ready · https://hcmmedical.vercel.app/api/v1/public/welcome |
+
+Si se compra un dominio propio, se pueden añadir subdominios (`app.`, `consultorios.`, etc.) en `vercel.json` + DNS; mientras tanto, las rutas anteriores son la forma oficial de acceso. Detalles en `infrastructure/VERCEL-DEPLOY.md`.
+
 ## Estado
 - **Base de datos (PostgreSQL 18):** completa y validada en `database/` (22 migraciones, seeds con catálogos CIE-10/CUPS/IUM desde SISPRO, RLS, pruebas y validador). Ver `database/README.md`.
 - **Backend (.NET 10 / ASP.NET Core):** la API en `backend/src/SIGM.Api` concentra la lógica real: JWT/MFA, multi-tenant + RLS, permisos, agenda, clínico, facturación, documentos y auditoría (~190 rutas). Los otros proyectos de la solución son cáscaras vacías. ¿Para qué sirve? Ver `infrastructure/VERCEL-DEPLOY.md` §0.

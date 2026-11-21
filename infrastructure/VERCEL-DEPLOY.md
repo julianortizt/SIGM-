@@ -21,7 +21,7 @@ Hay unas **190 rutas en 36 controladores**. Si se elimina .NET no se simplifica 
 | Pieza | Servicio Vercel | Resultado |
 |---|---|---|
 | API .NET | `api` (container, puerto 80) | `/api/*` y `/health*` |
-| Clínicas, Consultorios, Pacientes, Admin, Welcome | 5 servicios Vite | un subdominio cada uno |
+| Clínicas, Consultorios, Pacientes, Admin, Welcome | 5 servicios Vite | rutas en el mismo dominio: `/app`, `/consultorios`, `/pacientes`, `/admin`, `/` |
 | Base de datos | Neon (Marketplace) | PostgreSQL 18 |
 | Migraciones | `psql` manual | nunca en el arranque |
 
@@ -38,16 +38,22 @@ Hay unas **190 rutas en 36 controladores**. Si se elimina .NET no se simplifica 
    `sigm_app` **debe** tener `rolbypassrls = false`; créalo con SQL, nunca desde el asistente de Neon (heredaría `BYPASSRLS` y rompería el aislamiento).
 5. **Migrar** (una vez, desde local): `psql "$DATABASE_URL_UNPOOLED" -v ON_ERROR_STOP=1 -f database/run_all.sql`. Es idempotente; aplica las 22 migraciones y los seeds.
 6. **Variables** en Project Settings → Environment Variables (Production y Preview): copiar `infrastructure/vercel.env.example`. Lo mínimo es `ConnectionStrings__Default`, `ConnectionStrings__Platform`, `Jwt__Key` (≥32 chars) y `Database__AutoBackupEnabled=false`. Los `VITE_*` ya van en el `buildCommand` de `vercel.json`.
-7. **Dominio:** buscar/reemplazar `TU_DOMINIO.com` en `vercel.json` y añadir los 6 dominios en Project Settings → Domains (CNAME a `cname.vercel-dns.com`). Sin dominio, `*.vercel.app` sirve la landing y `/api/*` funciona igual.
-8. **Push** a `main` → Vercel construye los 6 servicios.
+7. **Sin dominio propio (ya funcionando):** los 5 portales se sirven por ruta en `https://hcmmedical.vercel.app`: `/app/`, `/consultorios/`, `/pacientes/`, `/admin/` y `/`. Cada `base` de Vite y cada rewrite en `vercel.json` ya están ajustados; no hay que crear subdominios para ver el sitio funcional.
+8. **Si después se compra un dominio:** añadir los hosts en los `rewrites` de `vercel.json` (con `has.host` si se quiere un subdominio por portal), registrar los dominios en Project Settings → Domains (CNAME a `cname.vercel-dns.com`) y ampliar `CORS__AllowedOrigins__N` con los orígenes exactos. Hasta entonces, no reemplazar nada por `TU_DOMINIO.com`.
+9. **Push** a `main` → Vercel construye los 6 servicios.
 
 ## 3. Verificación
 
 ```bash
-curl https://TU_PROYECTO.vercel.app/health
-curl https://TU_PROYECTO.vercel.app/health/ready   # {"status":"ready","database":true}
-curl https://TU_PROYECTO.vercel.app/api/v1/public/welcome
-curl -I https://app.TU_DOMINIO.com
+BASE=https://hcmmedical.vercel.app
+curl $BASE/health
+curl $BASE/health/ready                    # {"status":"ready","database":true}
+curl $BASE/api/v1/public/welcome
+curl -I $BASE/                             # landing
+curl -I $BASE/app/                         # SIGM Clínicas
+curl -I $BASE/consultorios/                # SIGM Consultorios
+curl -I $BASE/pacientes/                   # SIGM Pacientes
+curl -I $BASE/admin/                       # consola de plataforma
 ```
 
 Nota: `/api/health` **no existe**; el health de la API está en `/health` y `/health/ready`. Todo lo demás de la API sí va bajo `/api/v1/*`.
@@ -63,18 +69,18 @@ Después: login en el navegador y comprobar que se escribe auditoría con `sigm_
 | CORS bloqueado | Añadir `CORS__AllowedOrigins__N` con el origen exacto (`https://...`) |
 | RLS "no funciona" | Recrear `sigm_app` con SQL; verificar `rolbypassrls = false` |
 | `/health/ready` da 503 | Revisar `ConnectionStrings__Platform` |
-| Todo muestra la landing | Dominios no configurados o placeholder sin reemplazar |
+| Todo muestra la landing | Falta el rewrite del prefijo en `vercel.json` o el `base` del portal; con dominio propio, falta el host/CNAME |
 
 ## 5. Estado real de este despliegue
 
 - Proyecto Vercel: `hcmmedical` (equipo `julianortizt-7539s-projects`), repo `https://github.com/julianortizt/SIGM-`, rama `main`.
 - URL pública: **https://hcmmedical.vercel.app**.
-- Deploy verificado: `/health` y `/health/ready` → 200, `/api/v1/public/welcome` → 200, landing → 200, login con credenciales inválidas → 401.
+- Deploy verificado (`dpl_2ZvgT2vS8msTukvuGqnxtHsGwimJ`): `/health` y `/health/ready` → 200, `/api/v1/public/welcome` → 200; `/`, `/app/`, `/consultorios/`, `/pacientes/` y `/admin/` → 200 con sus assets JS; login con credenciales inválidas → 401.
 - Neon creado desde Marketplace (`sigm`), PostgreSQL 18.7, 96 policies RLS, 105 tablas, extensiones `pgcrypto`, `btree_gist`, `pg_trgm`, `citext`, `unaccent`.
 - Roles: `sigm_app` (login, sin `BYPASSRLS`) y `sigm_platform` (login, con `BYPASSRLS`).
 - Migraciones 001–022 aplicadas. Detalle operativo: `run_all.sql` se ejecutó como `neondb_owner`; la migración 020 requiere `current_user = sigm_platform` (se hizo con `SET ROLE` tras `GRANT sigm_platform TO neondb_owner` y `GRANT CREATE ON SCHEMA sigm TO sigm_platform`); las migraciones 021–022 requieren ser propietario de las tablas y se ejecutaron como `neondb_owner`.
 - Variables de entorno de **Production** cargadas. Las de **Preview** quedan pendientes: la CLI no permite aplicar "todas las ramas de preview" y `main` es la rama de producción; se pueden añadir desde el dashboard (Project Settings → Environment Variables → Preview → All Preview branches).
-- Sin dominio propio: funcionan la landing, `/health*` y `/api/v1/*`; los otros 4 portales requieren sus subdominios.
+- Sin dominio propio: los 5 portales y la API funcionan por ruta en `https://hcmmedical.vercel.app`. Los subdominios reales (`app.TU_DOMINIO.com`, etc.) quedan pendientes de comprar un dominio y configurar DNS.
 
 ## 6. Límites que quedan (no son del deploy)
 
