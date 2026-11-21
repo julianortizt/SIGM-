@@ -16,8 +16,10 @@ public sealed class TenantResolutionMiddleware(RequestDelegate next)
             if (Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("sub"), out var uid))
                 tenant.UserId = uid;
             tenant.ProductType = user.FindFirstValue("product_type");
-            tenant.IsPlatform = string.Equals(user.FindFirstValue("role"), "PLATFORM_ADMIN", StringComparison.OrdinalIgnoreCase)
-                || user.Claims.Any(c => c.Type == "permission" && c.Value == "platform.tenants.manage");
+            // La identidad de plataforma la fija el login del superadmin (claim firmado),
+            // no la posesión de un permiso: un permiso filtrado por error no debe
+            // convertir a un usuario de tenant en administrador de plataforma.
+            tenant.IsPlatform = string.Equals(user.FindFirstValue("is_platform_admin"), "true", StringComparison.OrdinalIgnoreCase);
         }
         // La cabecera X-Tenant-Id solo puede cambiar de organizacion a un usuario de
         // plataforma autenticado: antes cualquier cliente anonimo podia fijar el tenant

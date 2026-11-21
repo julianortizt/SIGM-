@@ -102,13 +102,9 @@ public class AppointmentsController(TenantConnectionFactory db, ITenantContext t
             if (req.Status == "CANCELLED") cmd.Parameters.AddWithValue("@reason", (object?)req.Reason ?? DBNull.Value);
             await cmd.ExecuteNonQueryAsync(ct);
         }
-        await using (var h = new NpgsqlCommand(@"INSERT INTO sigm.appointment_status_history(id,tenant_id,appointment_id,from_status,to_status,changed_by,reason)
-            VALUES(gen_random_uuid(),@t,@a,@f,@to,@u,@r)", c, tx))
-        {
-            h.Parameters.AddWithValue("@t", tid); h.Parameters.AddWithValue("@a", id); h.Parameters.AddWithValue("@f", (object?)from ?? DBNull.Value);
-            h.Parameters.AddWithValue("@to", req.Status); h.Parameters.AddWithValue("@u", (object?)tenant.UserId ?? DBNull.Value); h.Parameters.AddWithValue("@r", (object?)req.Reason ?? DBNull.Value);
-            await h.ExecuteNonQueryAsync(ct);
-        }
+        // El trigger sigm.fn_appointment_status_history() ya registra cada transición
+        // (incluido changed_by y el motivo de cancelación). Insertarlo aquí duplicaba
+        // el historial: cada cambio de estado aparecía dos veces.
         await tx.CommitAsync(ct);
         return Ok(new { id, status = req.Status, from });
     }

@@ -18,7 +18,15 @@ export class ApiError extends Error {
 export function getToken() { return localStorage.getItem('sigm_token'); }
 export function setSession(r: LoginResponse) { localStorage.setItem('sigm_token', r.accessToken); localStorage.setItem('sigm_tenant', r.tenantId || ''); localStorage.setItem('sigm_user', JSON.stringify(r)); }
 export function clearSession() { localStorage.removeItem('sigm_token'); localStorage.removeItem('sigm_tenant'); localStorage.removeItem('sigm_user'); }
-export function getSession(): LoginResponse | null { try { return JSON.parse(localStorage.getItem('sigm_user')||'null'); } catch { return null; } }
+export function getSession(): LoginResponse | null {
+  try {
+    const raw = localStorage.getItem('sigm_user');
+    if (!raw) return null;
+    const s = JSON.parse(raw) as LoginResponse;
+    if (s?.expiresAt && new Date(s.expiresAt).getTime() <= Date.now()) { clearSession(); return null; }
+    return s;
+  } catch { clearSession(); return null; }
+}
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<{ data: T; headers: Headers }> {
   const headers: Record<string,string> = { 'Content-Type': 'application/json', ...(init.headers as any) };
@@ -28,7 +36,13 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<{ data:
   const text = await res.text();
   let data: any = null;
   if (text) { try { data = JSON.parse(text); } catch { data = text; } }
-  if (!res.ok) throw new ApiError(data?.message || data?.title || res.statusText || `Error ${res.status}`, res.status, data);
+  if (!res.ok) {
+    if (res.status === 401 && !path.includes('/auth/')) {
+      clearSession();
+      window.location.assign(import.meta.env.BASE_URL || '/');
+    }
+    throw new ApiError(data?.message || data?.title || res.statusText || `Error ${res.status}`, res.status, data);
+  }
   return { data: data as T, headers: res.headers };
 }
 

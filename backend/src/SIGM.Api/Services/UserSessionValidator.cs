@@ -33,10 +33,10 @@ public sealed class UserSessionValidator(TenantConnectionFactory db, IMemoryCach
         }
         catch (Exception ex)
         {
-            // Si la base no responde no se debe tumbar la API: se deja pasar la
-            // petición, que fallará en su propio acceso a datos si corresponde.
-            logger.LogWarning(ex, "No se pudo validar la versión de sesión del usuario {UserId}", userId);
-            return true;
+            // Fail-closed: si no se puede comprobar la vigencia de la sesión,
+            // denegar es más seguro que dejar pasar un token revocado.
+            logger.LogWarning(ex, "No se pudo validar la versión de sesión del usuario {UserId}; se deniega la petición", userId);
+            return false;
         }
     }
 

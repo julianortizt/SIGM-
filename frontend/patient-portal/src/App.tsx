@@ -96,6 +96,7 @@ export default function App() {
   const [session, setSessionState] = useState(getSession());
   const [section, setSection] = useState<Section>('inicio');
   const [error, setError] = useState('');
+  const [partialWarning, setPartialWarning] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -112,6 +113,7 @@ export default function App() {
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
+    setPartialWarning('');
     const results = await Promise.allSettled([
       api.portalMe(),
       api.portalAppointments(),
@@ -123,11 +125,19 @@ export default function App() {
     const [me, appts, docs, rx, labs, consentRows] = results;
     if (me.status === 'fulfilled') setPatient(me.value);
     else setError(me.reason instanceof Error ? me.reason.message : 'No fue posible cargar su información.');
-    if (appts.status === 'fulfilled') setAppointments(appts.value);
-    if (docs.status === 'fulfilled') setDocuments(docs.value);
-    if (rx.status === 'fulfilled') setPrescriptions(rx.value);
-    if (labs.status === 'fulfilled') setLabOrders(labs.value);
-    if (consentRows.status === 'fulfilled') setConsents(consentRows.value);
+
+    // Antes un fallo parcial pasaba desapercibido: la sección quedaba vacía sin aviso.
+    const failed: string[] = [];
+    const apply = <T,>(r: PromiseSettledResult<T>, setter: (value: T) => void, label: string) => {
+      if (r.status === 'fulfilled') setter(r.value);
+      else failed.push(label);
+    };
+    apply(appts, setAppointments, 'citas');
+    apply(docs, setDocuments, 'documentos');
+    apply(rx, setPrescriptions, 'fórmulas');
+    apply(labs, setLabOrders, 'resultados de laboratorio');
+    apply(consentRows, setConsents, 'consentimientos');
+    if (failed.length) setPartialWarning(`No se pudieron cargar: ${failed.join(', ')}. El resto de la información sí está disponible.`);
     setLoading(false);
   }, []);
 
@@ -250,7 +260,7 @@ export default function App() {
           </form>
           <p className="auth-alt"><a href="#" onClick={e => { e.preventDefault(); setRecover(true); setError(''); }}>¿Olvidó su contraseña?</a></p>
           <p className="auth-alt">La activación de cuentas la gestiona su clínica o consultorio.</p>
-          <p className="auth-alt"><a href="/">← Volver al inicio</a></p>
+          <p className="auth-alt"><a href={import.meta.env.BASE_URL}>← Volver al inicio</a></p>
           </>}
         </div>
       </main>
@@ -319,6 +329,7 @@ export default function App() {
 
       <div className="content">
         {error && <div className="alert error">{error}</div>}
+        {partialWarning && <div className="alert">{partialWarning}</div>}
         {notice && <div className="alert">{notice}</div>}
 
         {section === 'inicio' && (

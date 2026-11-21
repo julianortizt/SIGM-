@@ -327,6 +327,7 @@ th.num { text-align: right; }
 .alert.error { background: var(--red-bg); color: var(--red); border-color: var(--red-line); font-weight: 500; }
 
 .slotgrid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.slot.taken { background: var(--red-bg, #fef2f2); color: var(--red, #b91c1c); border-color: var(--red-line, #fecaca); text-decoration: line-through; opacity: .75; }
 .slot {
   padding: 6px 13px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-strong);
   border: 1px solid var(--accent-line); font-weight: 600; font-size: 12.5px; font-variant-numeric: tabular-nums;

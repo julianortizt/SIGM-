@@ -44,11 +44,21 @@ public class UsersController(SigmDbContext db, ITenantContext tenant, TenantConn
             .Select(x => x.Trim().ToUpperInvariant())
             .Distinct()
             .ToArray();
+        // Los roles globales son plantillas disponibles para todos los tenants, PERO los roles
+        // de plataforma (PLATFORM_ADMIN y cualquier roleCode que conceda permisos platform.*)
+        // nunca pueden asignarse desde un panel de tenant: permitirlo era una escalada
+        // de privilegios confirmada (un CLINIC_ADMIN podía crear superadministradores).
         var validRoles = new List<string>();
         foreach (var code in requestedRoles)
         {
-            await using var q = new NpgsqlCommand(@"SELECT 1 FROM sigm.roles
-                WHERE code=@c AND (tenant_id IS NULL OR tenant_id=@t) LIMIT 1", conn, tx);
+            await using var q = new NpgsqlCommand(@"SELECT r.code FROM sigm.roles r
+                WHERE r.code=@c AND (r.tenant_id IS NULL OR r.tenant_id=@t)
+                  AND left(r.code, 9) <> 'PLATFORM_'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM sigm.role_permissions rp
+                      JOIN sigm.permissions p ON p.id=rp.permission_id
+                      WHERE rp.role_id=r.id AND p.code LIKE 'platform.%')
+                LIMIT 1", conn, tx);
             q.Parameters.AddWithValue("@c", code); q.Parameters.AddWithValue("@t", tid);
             if (await q.ExecuteScalarAsync(ct) is not null) validRoles.Add(code);
         }
@@ -58,6 +68,7 @@ public class UsersController(SigmDbContext db, ITenantContext tenant, TenantConn
 
         var userId = Guid.NewGuid();
         var hash = PasswordService.Hash(req.Password ?? Guid.NewGuid().ToString("N"));
+        var correoYaExistia = false;
 
         await using (var cmd = new NpgsqlCommand(@"INSERT INTO sigm.users(id,email,password_hash,full_name,phone,is_active)
             VALUES(@id,@email,@hash,@name,@phone,true) ON CONFLICT (email) DO NOTHING RETURNING id", conn, tx))
@@ -69,7 +80,24 @@ public class UsersController(SigmDbContext db, ITenantContext tenant, TenantConn
             cmd.Parameters.AddWithValue("@phone", (object?)req.Phone ?? DBNull.Value);
             var existing = await cmd.ExecuteScalarAsync(ct);
             if (existing is Guid e) userId = e;
-            else { await using var q = new NpgsqlCommand("SELECT id FROM sigm.users WHERE email=@email", conn, tx); q.Parameters.AddWithValue("@email", email); userId = (Guid)(await q.ExecuteScalarAsync(ct))!; }
+            else
+            {
+                correoYaExistia = true;
+                await using var q = new NpgsqlCommand("SELECT id FROM sigm.users WHERE email=@email", conn, tx);
+                q.Parameters.AddWithValue("@email", email);
+                userId = (Guid)(await q.ExecuteScalarAsync(ct))!;
+            }
+        }
+
+        // Un correo que ya pertenece a otra organización no puede vincularse automáticamente
+        // a esta: eso creaba membresías cruzadas y permitía heredar permisos ajenos.
+        if (correoYaExistia)
+        {
+            await using var own = new NpgsqlCommand(@"SELECT EXISTS (
+                SELECT 1 FROM sigm.user_tenants WHERE tenant_id=@t AND user_id=@u)", conn, tx);
+            own.Parameters.AddWithValue("@t", tid); own.Parameters.AddWithValue("@u", userId);
+            if (await own.ExecuteScalarAsync(ct) is not true)
+                return Conflict(new { message = "Ese correo ya pertenece a otra organización. Use una cuenta propia de esta organización." });
         }
 
         await using (var cmd = new NpgsqlCommand(@"INSERT INTO sigm.user_tenants(tenant_id,user_id,status,joined_at) VALUES(@tid,@uid,'ACTIVE',now()) ON CONFLICT DO NOTHING", conn, tx))
@@ -78,7 +106,13 @@ public class UsersController(SigmDbContext db, ITenantContext tenant, TenantConn
         foreach (var code in validRoles)
         {
             await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.user_roles(tenant_id,user_id,role_id)
-                SELECT @tid,@uid,id FROM sigm.roles WHERE code=@c AND (tenant_id IS NULL OR tenant_id=@tid) LIMIT 1
+                SELECT @tid,@uid,r.id FROM sigm.roles r WHERE r.code=@c AND (r.tenant_id IS NULL OR r.tenant_id=@tid)
+                  AND left(r.code, 9) <> 'PLATFORM_'
+                  AND NOT EXISTS (
+                      SELECT 1 FROM sigm.role_permissions rp
+                      JOIN sigm.permissions p ON p.id=rp.permission_id
+                      WHERE rp.role_id=r.id AND p.code LIKE 'platform.%')
+                LIMIT 1
                 ON CONFLICT DO NOTHING", conn, tx);
             cmd.Parameters.AddWithValue("@tid", tid); cmd.Parameters.AddWithValue("@uid", userId); cmd.Parameters.AddWithValue("@c", code);
             await cmd.ExecuteNonQueryAsync(ct);

@@ -207,7 +207,7 @@ export default function LoginView({ onLogin }: { onLogin: (session: Session) => 
             </a>
           </p>
           <p className="auth-alt">
-            <a href="/">← Volver al inicio</a>
+            <a href={import.meta.env.BASE_URL}>← Volver al inicio</a>
           </p>
           </>}
 

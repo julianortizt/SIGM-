@@ -7,7 +7,7 @@ namespace SIGM.Api.Services;
 
 public sealed class TokenService(IConfiguration cfg)
 {
-    public (string token, DateTimeOffset expiresAt) Create(Guid userId, string email, string fullName, Guid? tenantId, string? productType, IEnumerable<string> permissions, int tokenVersion = 0)
+    public (string token, DateTimeOffset expiresAt) Create(Guid userId, string email, string fullName, Guid? tenantId, string? productType, IEnumerable<string> permissions, int tokenVersion = 0, bool isPlatformAdmin = false)
     {
         var jwtKey = cfg["Jwt:Key"];
         const string DevOnly = "DEV_ONLY_CHANGE_ME_TO_A_LONG_RANDOM_SECRET_KEY_32+";
@@ -32,6 +32,7 @@ public sealed class TokenService(IConfiguration cfg)
         };
         if (tenantId is Guid tid) claims.Add(new Claim("tenant_id", tid.ToString()));
         if (!string.IsNullOrWhiteSpace(productType)) claims.Add(new Claim("product_type", productType));
+        if (isPlatformAdmin) claims.Add(new Claim("is_platform_admin", "true"));
         foreach (var p in permissions.Distinct()) claims.Add(new Claim("permission", p));
 
         var jwt = new JwtSecurityToken(

@@ -108,11 +108,14 @@ public class EncountersController(TenantConnectionFactory db, ITenantContext ten
     {
         if (tenant.TenantId is not Guid tid) return BadRequest(new { message = "Tenant no resuelto." });
         await using var c = await db.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand("SELECT id,encounter_id,patient_id,author_user_id,note_type,status,current_version,signed_at,created_at FROM sigm.clinical_notes WHERE tenant_id=@t AND encounter_id=@e ORDER BY note_type", c);
+        await using var cmd = new NpgsqlCommand(@"SELECT n.id,n.encounter_id,n.patient_id,n.author_user_id,n.note_type,n.status,n.current_version,n.signed_at,n.created_at,v.content
+            FROM sigm.clinical_notes n
+            LEFT JOIN sigm.clinical_note_versions v ON v.note_id=n.id AND v.tenant_id=n.tenant_id AND v.version_number=n.current_version
+            WHERE n.tenant_id=@t AND n.encounter_id=@e ORDER BY n.note_type", c);
         cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@e", id);
         var list = new List<object>();
         await using var rd = await cmd.ExecuteReaderAsync(ct);
-        while (await rd.ReadAsync(ct)) list.Add(new { id = rd.GetGuid(0), encounterId = rd.GetGuid(1), patientId = rd.GetGuid(2), authorUserId = rd.GetGuid(3), noteType = rd.GetString(4), status = rd.GetString(5), currentVersion = rd.GetInt32(6), signedAt = rd.IsDBNull(7)?(DateTimeOffset?)null:rd.GetFieldValue<DateTimeOffset>(7), createdAt = rd.GetFieldValue<DateTimeOffset>(8) });
+        while (await rd.ReadAsync(ct)) list.Add(new { id = rd.GetGuid(0), encounterId = rd.GetGuid(1), patientId = rd.GetGuid(2), authorUserId = rd.GetGuid(3), noteType = rd.GetString(4), status = rd.GetString(5), currentVersion = rd.GetInt32(6), signedAt = rd.IsDBNull(7)?(DateTimeOffset?)null:rd.GetFieldValue<DateTimeOffset>(7), createdAt = rd.GetFieldValue<DateTimeOffset>(8), content = ClinicalRecordExportController.FlattenJson(rd.IsDBNull(9) ? null : rd.GetString(9)) });
         return Ok(list);
     }
 }

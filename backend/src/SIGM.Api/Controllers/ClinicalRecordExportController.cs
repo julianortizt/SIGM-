@@ -194,7 +194,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
 
         await using (var cmd = new NpgsqlCommand(@"SELECT dc.code,dc.description,d.diagnosis_type,d.certainty,d.created_at
                 FROM sigm.diagnoses d JOIN sigm.diagnosis_catalog dc ON dc.id=d.diagnosis_catalog_id
-                WHERE d.tenant_id=@t AND d.patient_id=@p ORDER BY d.created_at DESC LIMIT 100", c))
+                WHERE d.tenant_id=@t AND d.patient_id=@p ORDER BY d.created_at DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
@@ -202,7 +202,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
                 s.Diagnoses.Add(new DiagnosisRow(rd.GetString(0), rd.GetString(1), rd.GetString(2), rd.GetString(3), rd.GetFieldValue<DateTimeOffset>(4)));
         }
 
-        await using (var cmd = new NpgsqlCommand("SELECT history_type,description,onset_date,status,created_at FROM sigm.medical_history WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC LIMIT 100", c))
+        await using (var cmd = new NpgsqlCommand("SELECT history_type,description,onset_date,status,created_at FROM sigm.medical_history WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
@@ -211,7 +211,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         }
 
         await using (var cmd = new NpgsqlCommand(@"SELECT measured_at,temperature_c,heart_rate,respiratory_rate,systolic_bp,diastolic_bp,oxygen_saturation,weight_kg,height_cm,bmi
-                FROM sigm.vital_signs WHERE tenant_id=@t AND patient_id=@p ORDER BY measured_at DESC LIMIT 30", c))
+                FROM sigm.vital_signs WHERE tenant_id=@t AND patient_id=@p ORDER BY measured_at DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
@@ -225,7 +225,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
                 FROM sigm.encounters e
                 LEFT JOIN sigm.professionals pr ON pr.id=e.professional_id
                 LEFT JOIN sigm.specialties sp ON sp.id=e.specialty_id
-                WHERE e.tenant_id=@t AND e.patient_id=@p ORDER BY e.encounter_date DESC LIMIT 100", c))
+                WHERE e.tenant_id=@t AND e.patient_id=@p ORDER BY e.encounter_date DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
@@ -254,9 +254,12 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         }
 
         var amendments = new Dictionary<Guid, List<(int Number, string Reason, string Content)>>();
-        await using (var cmd = new NpgsqlCommand("SELECT note_id,amendment_number,reason,content FROM sigm.clinical_amendments WHERE tenant_id=@t ORDER BY amendment_number", c))
+        await using (var cmd = new NpgsqlCommand(@"SELECT a.note_id,a.amendment_number,a.reason,a.content
+                FROM sigm.clinical_amendments a
+                JOIN sigm.clinical_notes n ON n.id=a.note_id AND n.tenant_id=a.tenant_id
+                WHERE a.tenant_id=@t AND n.patient_id=@p ORDER BY a.amendment_number", c))
         {
-            cmd.Parameters.AddWithValue("@t", tid);
+            cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
             while (await rd.ReadAsync(ct))
             {
@@ -277,7 +280,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
 
         // Fórmulas
         var rx = new List<PrescriptionRow>();
-        await using (var cmd = new NpgsqlCommand("SELECT id,prescription_number,status,issued_at FROM sigm.prescriptions WHERE tenant_id=@t AND patient_id=@p ORDER BY issued_at DESC LIMIT 100", c))
+        await using (var cmd = new NpgsqlCommand("SELECT id,prescription_number,status,issued_at FROM sigm.prescriptions WHERE tenant_id=@t AND patient_id=@p ORDER BY issued_at DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
@@ -303,7 +306,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
 
         // Laboratorio
         var orders = new List<LabOrderRow>();
-        await using (var cmd = new NpgsqlCommand("SELECT id,order_number,status,ordered_at FROM sigm.laboratory_orders WHERE tenant_id=@t AND patient_id=@p ORDER BY ordered_at DESC LIMIT 50", c))
+        await using (var cmd = new NpgsqlCommand("SELECT id,order_number,status,ordered_at FROM sigm.laboratory_orders WHERE tenant_id=@t AND patient_id=@p ORDER BY ordered_at DESC", c))
         {
             cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@p", patientId);
             await using var rd = await cmd.ExecuteReaderAsync(ct);
@@ -331,7 +334,7 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
         return s;
     }
 
-    private static string FlattenJson(string? json)
+    internal static string FlattenJson(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return "(sin contenido)";
         try

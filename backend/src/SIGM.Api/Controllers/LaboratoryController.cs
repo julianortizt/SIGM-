@@ -60,12 +60,28 @@ public class LaboratoryController(TenantConnectionFactory db, ITenantContext ten
     public async Task<IActionResult> AddResult([FromBody] ResultReq req, CancellationToken ct)
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
+        if (string.IsNullOrWhiteSpace(req.ResultValue))
+            return BadRequest(new { message = "El valor del resultado es obligatorio." });
+
+        // El INSERT anterior usaba columnas que no existen (laboratory_order_item_id,
+        // result_unit, interpretation, is_abnormal, reported_at...): fallaba siempre con 42703.
+        var flag = (req.Interpretation ?? "").Trim().ToUpperInvariant();
+        if (flag is not ("NORMAL" or "HIGH" or "LOW" or "CRITICAL" or "ABNORMAL"))
+            flag = req.IsAbnormal ? "ABNORMAL" : "NORMAL";
+
         await using var c = await db.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.laboratory_results(id,tenant_id,laboratory_order_item_id,result_value,result_unit,reference_range,interpretation,is_abnormal,reported_at,reported_by)
-            VALUES(gen_random_uuid(),@t,@i,@v,@u,@r,@int,@ab,now(),@by)", c);
-        cmd.Parameters.AddWithValue("@t",tid); cmd.Parameters.AddWithValue("@i",req.LaboratoryOrderItemId); cmd.Parameters.AddWithValue("@v",(object?)req.ResultValue??DBNull.Value);
+        await using (var owns = new NpgsqlCommand(@"SELECT 1 FROM sigm.laboratory_order_items
+            WHERE tenant_id=@t AND id=@i LIMIT 1", c))
+        {
+            owns.Parameters.AddWithValue("@t", tid); owns.Parameters.AddWithValue("@i", req.LaboratoryOrderItemId);
+            if (await owns.ExecuteScalarAsync(ct) is null)
+                return NotFound(new { message = "El ítem de la orden no existe en esta organización." });
+        }
+        await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.laboratory_results(id,tenant_id,order_item_id,result_value,unit,reference_range,result_flag,resulted_at)
+            VALUES(gen_random_uuid(),@t,@i,@v,@u,@r,@flag,now())", c);
+        cmd.Parameters.AddWithValue("@t",tid); cmd.Parameters.AddWithValue("@i",req.LaboratoryOrderItemId); cmd.Parameters.AddWithValue("@v",req.ResultValue.Trim());
         cmd.Parameters.AddWithValue("@u",(object?)req.ResultUnit??DBNull.Value); cmd.Parameters.AddWithValue("@r",(object?)req.ReferenceRange??DBNull.Value);
-        cmd.Parameters.AddWithValue("@int",(object?)req.Interpretation??DBNull.Value); cmd.Parameters.AddWithValue("@ab",req.IsAbnormal); cmd.Parameters.AddWithValue("@by",(object?)tenant.UserId??DBNull.Value);
+        cmd.Parameters.AddWithValue("@flag",flag);
         await cmd.ExecuteNonQueryAsync(ct); return Ok();
     }
 }

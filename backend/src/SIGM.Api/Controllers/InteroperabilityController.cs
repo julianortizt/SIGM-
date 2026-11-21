@@ -39,11 +39,14 @@ public class InteroperabilityController(TenantConnectionFactory db, ITenantConte
     }
 
     [HttpGet("fhir-mappings")]
-    [AllowAnonymous]
+    [RequirePermission("reports.read")]
     public async Task<IActionResult> FhirMappings(CancellationToken ct)
     {
-        await using var c = await db.OpenAsync(ct, platform: true);
-        await using var cmd = new NpgsqlCommand("SELECT id,resource_type,local_table,local_field,fhir_path,mapping,is_active FROM sigm.fhir_mappings ORDER BY resource_type LIMIT 500", c);
+        if (tenant.TenantId is not Guid tid) return BadRequest();
+        await using var c = await db.OpenAsync(ct);
+        await using var cmd = new NpgsqlCommand(@"SELECT id,resource_type,local_table,local_field,fhir_path,mapping,is_active
+            FROM sigm.fhir_mappings WHERE tenant_id IS NULL OR tenant_id=@t ORDER BY resource_type LIMIT 500", c);
+        cmd.Parameters.AddWithValue("@t", tid);
         var list=new List<object>(); await using var rd=await cmd.ExecuteReaderAsync(ct);
         while(await rd.ReadAsync(ct)) list.Add(new{id=rd.GetGuid(0),resourceType=rd.GetString(1),localTable=rd.IsDBNull(2)?null:rd.GetString(2),localField=rd.IsDBNull(3)?null:rd.GetString(3),fhirPath=rd.IsDBNull(4)?null:rd.GetString(4),mapping=rd.IsDBNull(5)?null:rd.GetString(5),isActive=rd.IsDBNull(6)?(bool?)null:rd.GetBoolean(6)});
         return Ok(list);

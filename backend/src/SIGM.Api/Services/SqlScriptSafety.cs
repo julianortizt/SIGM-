@@ -35,6 +35,11 @@ public static partial class SqlScriptSafety
         (@"\bdrop\s+(table|schema|column|index|type|view|materialized\s+view|sequence)\b", "Contiene DROP de objetos."),
         (@"\btruncate\b", "Contiene TRUNCATE."),
         (@"\balter\s+table\b[\s\S]*?\bdrop\b", "Contiene ALTER TABLE ... DROP."),
+        // SQL dinámico puede ocultar un DROP detrás de concatenaciones (p. ej.
+        // EXECUTE 'dr'||'op table ...'), así que siempre exige confirmación reforzada.
+        (@"\bexecute\b", "Contiene EXECUTE de SQL dinámico."),
+        (@"\bdo\s*\$\$", "Contiene un bloque DO anónimo."),
+        (@"\bformat\s*\(", "Contiene FORMAT de SQL dinámico."),
     ];
 
     public static Analysis Analyze(string sql)

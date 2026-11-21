@@ -1,3 +1,6 @@
+using Npgsql;
+using SIGM.Infrastructure.Persistence;
+
 namespace SIGM.Api.Services;
 
 public interface IFileStorageService
@@ -60,5 +63,59 @@ public sealed class LocalFileStorageService(IConfiguration cfg, IWebHostEnvironm
         if (!candidate.StartsWith(rootWithSep, StringComparison.Ordinal))
             throw new InvalidOperationException("clave de almacenamiento no válida (ruta fuera del directorio permitido)");
         return candidate;
+    }
+}
+
+/// <summary>
+/// Almacenamiento durable en PostgreSQL para despliegues serverless (Vercel).
+/// El filesystem de una función es efímero: con LocalFileStorageService los
+/// archivos subidos desaparecían tras el primer cold start. Los blobs viven en
+/// sigm.file_blobs y heredan la durabilidad y los backups de Neon.
+/// </summary>
+public sealed class DatabaseFileStorageService(TenantConnectionFactory db) : IFileStorageService
+{
+    public async Task<string> SaveAsync(string tenantId, string fileName, Stream content, string contentType, CancellationToken ct = default)
+    {
+        if (!Guid.TryParse(tenantId, out var tid))
+            throw new ArgumentException("Identificador de organización no válido.", nameof(tenantId));
+        var safeName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeName)) safeName = "file";
+        if (safeName.Contains("..", StringComparison.Ordinal) || safeName.Contains('\0'))
+            throw new ArgumentException("nombre de archivo no válido", nameof(fileName));
+
+        using var buffer = new MemoryStream();
+        await content.CopyToAsync(buffer, ct);
+        var key = $"{tenantId}/{DateTime.UtcNow:yyyy/MM}/{Guid.NewGuid():N}-{safeName}";
+
+        await using var c = await db.OpenAsync(ct, platform: true);
+        await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.file_blobs
+            (storage_key,tenant_id,file_name,content_type,content,created_at)
+            VALUES(@k,@t,@n,@ct,@b,now())", c);
+        cmd.Parameters.AddWithValue("@k", key);
+        cmd.Parameters.AddWithValue("@t", tid);
+        cmd.Parameters.AddWithValue("@n", safeName);
+        cmd.Parameters.AddWithValue("@ct", string.IsNullOrWhiteSpace(contentType) ? "application/octet-stream" : contentType);
+        cmd.Parameters.AddWithValue("@b", buffer.ToArray());
+        await cmd.ExecuteNonQueryAsync(ct);
+        return key;
+    }
+
+    public async Task<Stream?> OpenReadAsync(string storageKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(storageKey)) return null;
+        await using var c = await db.OpenAsync(ct, platform: true);
+        await using var cmd = new NpgsqlCommand("SELECT content FROM sigm.file_blobs WHERE storage_key=@k", c);
+        cmd.Parameters.AddWithValue("@k", storageKey);
+        var bytes = await cmd.ExecuteScalarAsync(ct) as byte[];
+        return bytes is null ? null : new MemoryStream(bytes, writable: false);
+    }
+
+    public async Task DeleteAsync(string storageKey, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(storageKey)) return;
+        await using var c = await db.OpenAsync(ct, platform: true);
+        await using var cmd = new NpgsqlCommand("DELETE FROM sigm.file_blobs WHERE storage_key=@k", c);
+        cmd.Parameters.AddWithValue("@k", storageKey);
+        await cmd.ExecuteNonQueryAsync(ct);
     }
 }

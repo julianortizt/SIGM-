@@ -11,10 +11,15 @@ public sealed class TenantDbConnectionInterceptor(ITenantContext tenant) : DbCon
     {
         if (connection is NpgsqlConnection npg)
         {
+            await using (var clear = npg.CreateCommand())
+            {
+                clear.CommandText = "SELECT set_config('app.tenant_id', '', false), set_config('app.user_id', '', false)";
+                await clear.ExecuteNonQueryAsync(cancellationToken);
+            }
             if (tenant.TenantId is Guid tid)
-                await using (var cmd = npg.CreateCommand()) { cmd.CommandText = "SELECT set_config('app.tenant_id', @v, true)"; cmd.Parameters.AddWithValue("@v", tid.ToString()); await cmd.ExecuteNonQueryAsync(cancellationToken); }
+                await using (var cmd = npg.CreateCommand()) { cmd.CommandText = "SELECT set_config('app.tenant_id', @v, false)"; cmd.Parameters.AddWithValue("@v", tid.ToString()); await cmd.ExecuteNonQueryAsync(cancellationToken); }
             if (tenant.UserId is Guid uid)
-                await using (var cmd = npg.CreateCommand()) { cmd.CommandText = "SELECT set_config('app.user_id', @v, true)"; cmd.Parameters.AddWithValue("@v", uid.ToString()); await cmd.ExecuteNonQueryAsync(cancellationToken); }
+                await using (var cmd = npg.CreateCommand()) { cmd.CommandText = "SELECT set_config('app.user_id', @v, false)"; cmd.Parameters.AddWithValue("@v", uid.ToString()); await cmd.ExecuteNonQueryAsync(cancellationToken); }
         }
         await base.ConnectionOpenedAsync(connection, eventData, cancellationToken);
     }

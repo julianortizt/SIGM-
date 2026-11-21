@@ -87,6 +87,17 @@ public class TenantConfigController(TenantConnectionFactory db, ITenantContext t
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
         await using var c = await db.OpenAsync(ct);
+
+        // Un módulo bloqueado por soporte de plataforma no puede ser reactivado
+        // desde la configuración del tenant (el flag viaja en config.platformManaged).
+        await using (var guard = new NpgsqlCommand(@"SELECT config->>'platformManaged' FROM sigm.tenant_features
+            WHERE tenant_id=@t AND feature_code=@f", c))
+        {
+            guard.Parameters.AddWithValue("@t", tid); guard.Parameters.AddWithValue("@f", featureCode);
+            if (string.Equals(await guard.ExecuteScalarAsync(ct) as string, "true", StringComparison.OrdinalIgnoreCase))
+                return Conflict(new { message = "Este módulo está gestionado por el soporte de plataforma. Contacte con administración." });
+        }
+
         await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.tenant_features(tenant_id,feature_code,enabled,limit_value,config,updated_at)
             VALUES(@t,@f,@e,@l,COALESCE(@c::jsonb,'{}'::jsonb),now())
             ON CONFLICT (tenant_id,feature_code) DO UPDATE SET enabled=EXCLUDED.enabled, limit_value=EXCLUDED.limit_value, config=EXCLUDED.config, updated_at=now()", c);
@@ -146,7 +157,18 @@ public class TenantConfigController(TenantConnectionFactory db, ITenantContext t
         await using var cmd = new NpgsqlCommand("SELECT value FROM sigm.user_preferences WHERE tenant_id=@t AND user_id=@u AND pref_key='dashboard'", c);
         cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@u", uid);
         var res = await cmd.ExecuteScalarAsync(ct);
-        return res is null ? Ok(new { hidden = Array.Empty<string>() }) : Ok(res.ToString());
+        if (res is null) return Ok(new { hidden = Array.Empty<string>() });
+        try
+        {
+            // Antes se devolvía el JSON como string: los portales hacían JSON Parse
+            // sobre una respuesta ya serializada y perdían las preferencias 'hidden'.
+            using var doc = JsonDocument.Parse(res.ToString()!);
+            return Ok(doc.RootElement.Clone());
+        }
+        catch (JsonException)
+        {
+            return Ok(new { hidden = Array.Empty<string>() });
+        }
     }
 
     [HttpPut("dashboard")]

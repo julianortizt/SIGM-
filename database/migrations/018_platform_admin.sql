@@ -49,7 +49,8 @@ VALUES (
 )
 ON CONFLICT (email) DO UPDATE
     SET is_platform_admin = true,
-        is_active = true,
-        password_hash = EXCLUDED.password_hash;
+        is_active = true;
+-- No se sobreescribe password_hash: repetir run_all.sql no debe devolverle
+-- la contraseña demo a una cuenta que ya fue rotada en producción.
 
 COMMIT;

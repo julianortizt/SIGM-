@@ -46,10 +46,10 @@ public class SecurityComplianceController(TenantConnectionFactory db, ITenantCon
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
         await using var c = await db.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand("SELECT id,incident_type,severity,description,status,detected_at,resolved_at,reported_to,metadata FROM sigm.security_incidents WHERE tenant_id=@t OR tenant_id IS NULL ORDER BY detected_at DESC LIMIT 200", c);
+        await using var cmd = new NpgsqlCommand("SELECT id,incident_type,severity,description,status,detected_at,resolved_at,reported_to,metadata FROM sigm.security_incidents WHERE tenant_id=@t ORDER BY detected_at DESC LIMIT 200", c);
         cmd.Parameters.AddWithValue("@t", tid); return Ok(await ReadAll(cmd, ct));
     }
-    [HttpPost("security-incidents")][RequirePermission("audit.read")]
+    [HttpPost("security-incidents")][RequirePermission("tenant.settings.manage")]
     public async Task<IActionResult> CreateIncident([FromBody] IncidentReq req, CancellationToken ct)
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
@@ -66,7 +66,7 @@ public class SecurityComplianceController(TenantConnectionFactory db, ITenantCon
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
         await using var c = await db.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand("SELECT id,user_id,event_type,success,ip_address,user_agent,detail,occurred_at FROM sigm.authentication_events WHERE tenant_id=@t OR tenant_id IS NULL ORDER BY occurred_at DESC LIMIT 200", c);
+        await using var cmd = new NpgsqlCommand("SELECT id,user_id,event_type,success,ip_address,user_agent,detail,occurred_at FROM sigm.authentication_events WHERE tenant_id=@t ORDER BY occurred_at DESC LIMIT 200", c);
         cmd.Parameters.AddWithValue("@t", tid); return Ok(await ReadAll(cmd, ct));
     }
 

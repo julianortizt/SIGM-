@@ -130,19 +130,28 @@ public class BillingController(TenantConnectionFactory db, ITenantContext tenant
     public async Task<IActionResult> AddPayment(Guid id, [FromBody] PaymentReq req, CancellationToken ct)
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
+        if (req.Amount <= 0) return BadRequest(new { message = "El monto del pago debe ser mayor que cero." });
+
         await using var c = await db.OpenAsync(ct);
+        await using var tx = await c.BeginTransactionAsync(ct);
         await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.payments(id,tenant_id,invoice_id,payment_date,amount,payment_method,reference,received_by,notes)
-            VALUES(gen_random_uuid(),@t,@inv,COALESCE(@date,now()),@amt,@method,@ref,@u,@notes)", c);
+            VALUES(gen_random_uuid(),@t,@inv,COALESCE(@date,now()),@amt,@method,@ref,@u,@notes)", c, tx);
         cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@inv", id); cmd.Parameters.AddWithValue("@date", (object?)req.PaymentDate ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@amt", req.Amount); cmd.Parameters.AddWithValue("@method", req.PaymentMethod ?? "CASH");
         cmd.Parameters.AddWithValue("@ref", (object?)req.Reference ?? DBNull.Value); cmd.Parameters.AddWithValue("@u", (object?)tenant.UserId ?? DBNull.Value); cmd.Parameters.AddWithValue("@notes", (object?)req.Notes ?? DBNull.Value);
-        try { await cmd.ExecuteNonQueryAsync(ct); } catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.ForeignKeyViolation) { return NotFound(new { message = "Factura no encontrada." }); }
+        try { await cmd.ExecuteNonQueryAsync(ct); }
+        catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.ForeignKeyViolation)
+        {
+            await tx.RollbackAsync(ct);
+            return NotFound(new { message = "Factura no encontrada." });
+        }
         // El saldo se calcula sobre la marcha: total - pagos. Solo se marca PAID cuando cubre el total.
         await using var up = new NpgsqlCommand(@"UPDATE sigm.invoices i SET
             status = CASE WHEN (i.total - COALESCE((SELECT SUM(p.amount) FROM sigm.payments p WHERE p.tenant_id=@t AND p.invoice_id=@id),0)) <= 0 AND i.status NOT IN ('VOID') THEN 'PAID' ELSE i.status END,
-            updated_at=now() WHERE i.id=@id AND i.tenant_id=@t", c);
+            updated_at=now() WHERE i.id=@id AND i.tenant_id=@t", c, tx);
         up.Parameters.AddWithValue("@t", tid); up.Parameters.AddWithValue("@id", id);
         await up.ExecuteNonQueryAsync(ct);
+        await tx.CommitAsync(ct);
         return Ok();
     }
 

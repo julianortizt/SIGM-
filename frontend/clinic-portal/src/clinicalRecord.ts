@@ -18,7 +18,9 @@ function esc(value: unknown) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function fmt(value: unknown) {
@@ -190,7 +192,7 @@ ${table(
 <script>window.addEventListener('load', function () { setTimeout(function () { window.print(); }, 250); });</script>
 </body></html>`;
 
-  const win = window.open('', '_blank');
+  const win = window.open('', '_blank', 'noopener');
   if (!win) {
     const blob = new Blob([html], { type: 'text/html' });
     window.location.href = URL.createObjectURL(blob);

@@ -149,7 +149,7 @@ public class AuthController(TenantConnectionFactory db, TokenService tokens, Use
                     while (await rd.ReadAsync(ct)) platformPerms.Add(rd.GetString(0));
                 }
             }
-            var (ptoken, pexp) = tokens.Create(userId, email, fullName ?? email, impTid, impProduct, platformPerms, tokenVersion);
+            var (ptoken, pexp) = tokens.Create(userId, email, fullName ?? email, impTid, impProduct, platformPerms, tokenVersion, isPlatformAdmin: true);
             await LogAuthEvent(c, impTid, userId, "PLATFORM_LOGIN_SUCCESS", true, ct);
             return Ok(new LoginResponse(ptoken, pexp, userId, impTid, fullName ?? email, platformPerms.Distinct().ToArray(), impCode, impName));
         }
@@ -187,11 +187,16 @@ public class AuthController(TenantConnectionFactory db, TokenService tokens, Use
                     tenantName = rd.IsDBNull(2) ? null : rd.GetString(2);
                 }
             }
+            // Defensa en profundidad: aunque exista una asignación de rol de plataforma
+            // filtrada por error, un login de tenant nunca emite permisos platform.*.
             await using (var cmd = new NpgsqlCommand(@"SELECT DISTINCT p.code
                 FROM sigm.user_roles ur
+                JOIN sigm.roles r ON r.id=ur.role_id
                 JOIN sigm.role_permissions rp ON rp.role_id=ur.role_id
                 JOIN sigm.permissions p ON p.id=rp.permission_id
-                WHERE ur.tenant_id=@t AND ur.user_id=@u", c))
+                WHERE ur.tenant_id=@t AND ur.user_id=@u
+                  AND left(r.code, 9) <> 'PLATFORM_'
+                  AND p.code NOT LIKE 'platform.%'", c))
             {
                 cmd.Parameters.AddWithValue("@t", tid); cmd.Parameters.AddWithValue("@u", userId);
                 await using var rd = await cmd.ExecuteReaderAsync(ct);

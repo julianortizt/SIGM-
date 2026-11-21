@@ -43,7 +43,7 @@ public class SigmDbContext : DbContext
         modelBuilder.HasDefaultSchema("sigm");
 
         modelBuilder.Entity<TenantRow>(e => { e.ToTable("tenants"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantCode).HasColumnName("tenant_code"); e.Property(x => x.LegalName).HasColumnName("legal_name"); e.Property(x => x.CommercialName).HasColumnName("commercial_name"); e.Property(x => x.TaxId).HasColumnName("tax_id"); e.Property(x => x.ProductType).HasColumnName("product_type"); e.Property(x => x.Status).HasColumnName("status"); e.Property(x => x.Timezone).HasColumnName("timezone"); e.Property(x => x.Locale).HasColumnName("locale"); e.Property(x => x.Currency).HasColumnName("currency"); });
-        modelBuilder.Entity<OrganizationRow>(e => { e.ToTable("organizations"); e.HasKey(x => x.TenantId); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.LegalName).HasColumnName("legal_name"); e.Property(x => x.CommercialName).HasColumnName("commercial_name"); e.Property(x => x.TaxId).HasColumnName("tax_id"); e.Property(x => x.ProductType).HasColumnName("product_type"); e.Property(x => x.Status).HasColumnName("status"); e.Property(x => x.Email).HasColumnName("email"); e.Property(x => x.Phone).HasColumnName("phone"); });
+        modelBuilder.Entity<OrganizationRow>(e => { e.ToTable("organizations"); e.HasKey(x => x.TenantId); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.LegalName).HasColumnName("legal_name"); e.Property(x => x.CommercialName).HasColumnName("commercial_name"); e.Property(x => x.TaxId).HasColumnName("tax_id"); e.Property(x => x.ProductType).HasColumnName("organization_type"); e.Property(x => x.Status).HasColumnName("status"); e.Property(x => x.Email).HasColumnName("email"); e.Property(x => x.Phone).HasColumnName("phone"); });
         modelBuilder.Entity<UserRow>(e => { e.ToTable("users"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.Email).HasColumnName("email"); e.Property(x => x.PasswordHash).HasColumnName("password_hash"); e.Property(x => x.FullName).HasColumnName("full_name"); e.Property(x => x.Phone).HasColumnName("phone"); e.Property(x => x.IsActive).HasColumnName("is_active"); e.Property(x => x.MfaEnabled).HasColumnName("mfa_enabled");
         e.Property(x => x.MfaSecretEncrypted).HasColumnName("mfa_secret_encrypted"); });
         modelBuilder.Entity<UserTenantRow>(e => { e.ToTable("user_tenants"); e.HasKey(x => new { x.TenantId, x.UserId }); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.UserId).HasColumnName("user_id"); e.Property(x => x.Status).HasColumnName("status"); });
@@ -65,7 +65,7 @@ public class SigmDbContext : DbContext
         modelBuilder.Entity<EncounterRow>(e => { e.ToTable("encounters"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.PatientId).HasColumnName("patient_id"); e.Property(x => x.ProfessionalId).HasColumnName("professional_id"); e.Property(x => x.SpecialtyId).HasColumnName("specialty_id"); e.Property(x => x.SiteId).HasColumnName("site_id"); e.Property(x => x.AppointmentId).HasColumnName("appointment_id"); e.Property(x => x.EncounterType).HasColumnName("encounter_type"); e.Property(x => x.EncounterDate).HasColumnName("encounter_date"); e.Property(x => x.Status).HasColumnName("status"); e.Property(x => x.ChiefComplaint).HasColumnName("chief_complaint"); });
         modelBuilder.Entity<ClinicalNoteRow>(e => { e.ToTable("clinical_notes"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.EncounterId).HasColumnName("encounter_id"); e.Property(x => x.PatientId).HasColumnName("patient_id"); e.Property(x => x.AuthorUserId).HasColumnName("author_user_id"); e.Property(x => x.NoteType).HasColumnName("note_type"); e.Property(x => x.Status).HasColumnName("status"); e.Property(x => x.CurrentVersion).HasColumnName("current_version"); e.Property(x => x.SignedAt).HasColumnName("signed_at"); });
         modelBuilder.Entity<ClinicalNoteVersionRow>(e => { e.ToTable("clinical_note_versions"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.NoteId).HasColumnName("note_id"); e.Property(x => x.VersionNumber).HasColumnName("version_number"); e.Property(x => x.Content).HasColumnName("content").HasColumnType("jsonb"); e.Property(x => x.AuthorUserId).HasColumnName("author_user_id"); e.Property(x => x.SignedAt).HasColumnName("signed_at"); });
-        modelBuilder.Entity<AppointmentTypeRow>(e => { e.ToTable("appointment_types"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.Name).HasColumnName("name"); e.Property(x => x.DefaultDurationMinutes).HasColumnName("default_duration_minutes"); e.Property(x => x.IsActive).HasColumnName("is_active"); });
+        modelBuilder.Entity<AppointmentTypeRow>(e => { e.ToTable("appointment_types"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.Name).HasColumnName("name"); e.Property(x => x.DefaultDurationMinutes).HasColumnName("duration_minutes"); e.Property(x => x.IsActive).HasColumnName("is_active"); });
         modelBuilder.Entity<AppointmentRow>(e => { e.ToTable("appointments"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.AppointmentNumber).HasColumnName("appointment_number"); e.Property(x => x.PatientId).HasColumnName("patient_id"); e.Property(x => x.ProfessionalId).HasColumnName("professional_id"); e.Property(x => x.SpecialtyId).HasColumnName("specialty_id"); e.Property(x => x.SiteId).HasColumnName("site_id"); e.Property(x => x.MedicalOfficeId).HasColumnName("medical_office_id"); e.Property(x => x.StartsAt).HasColumnName("starts_at"); e.Property(x => x.EndsAt).HasColumnName("ends_at"); e.Property(x => x.Status).HasColumnName("status"); e.Property(x => x.Reason).HasColumnName("reason"); });
         modelBuilder.Entity<ScheduleRow>(e => { e.ToTable("schedules"); e.HasKey(x => x.Id); e.Property(x => x.Id).HasColumnName("id"); e.Property(x => x.TenantId).HasColumnName("tenant_id"); e.Property(x => x.ProfessionalId).HasColumnName("professional_id"); e.Property(x => x.SiteId).HasColumnName("site_id"); e.Property(x => x.Weekday).HasColumnName("weekday"); e.Property(x => x.StartTime).HasColumnName("start_time"); e.Property(x => x.EndTime).HasColumnName("end_time"); e.Property(x => x.IsActive).HasColumnName("is_active"); });
     }
@@ -74,17 +74,22 @@ public class SigmDbContext : DbContext
     {
         var conn = Database.GetDbConnection();
         if (conn.State != ConnectionState.Open) await conn.OpenAsync(ct);
+        await using (var clear = conn.CreateCommand())
+        {
+            clear.CommandText = "SELECT set_config('app.tenant_id', '', false), set_config('app.user_id', '', false);";
+            await clear.ExecuteNonQueryAsync(ct);
+        }
         if (_tenant.TenantId is Guid tid)
         {
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT set_config('app.tenant_id', @tid, true);";
+            cmd.CommandText = "SELECT set_config('app.tenant_id', @tid, false);";
             var p = cmd.CreateParameter(); p.ParameterName = "@tid"; p.Value = tid.ToString(); cmd.Parameters.Add(p);
             await cmd.ExecuteNonQueryAsync(ct);
         }
         if (_tenant.UserId is Guid uid)
         {
             await using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT set_config('app.user_id', @uid, true);";
+            cmd.CommandText = "SELECT set_config('app.user_id', @uid, false);";
             var p = cmd.CreateParameter(); p.ParameterName = "@uid"; p.Value = uid.ToString(); cmd.Parameters.Add(p);
             await cmd.ExecuteNonQueryAsync(ct);
         }

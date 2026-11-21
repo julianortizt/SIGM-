@@ -269,7 +269,7 @@ export default function App() {
               <button className="btn" disabled={busy}>{busy ? 'Verificando…' : 'Entrar'}</button>
             </form>
             <p className="auth-alt">¿Primera vez? <a href="#" onClick={e => { e.preventDefault(); setView('register'); api.specialties().then(setSpecialties).catch(() => {}); }}>Cree la cuenta de su clínica</a></p>
-            <p className="auth-alt"><a href="/">← Volver al inicio</a></p>
+            <p className="auth-alt"><a href={import.meta.env.BASE_URL}>← Volver al inicio</a></p>
           </> : <>
             <h2>Crear organización</h2>
             <p className="sub">Registre su clínica y configure el administrador inicial.</p>
@@ -695,7 +695,8 @@ export default function App() {
               const arr: any[] = Array.isArray(slots) ? slots : (slots?.slots || slots?.available || slots?.items || []);
               if (Array.isArray(arr) && arr.length > 0) return <div className="slotgrid">{arr.map((s: any, i: number) => {
                 const t = typeof s === 'string' ? s : (s.startsAt || s.start || s.time || s.startTime);
-                return <span className="slot" key={i}>{t ? new Date(t).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : JSON.stringify(s)}</span>;
+                const available = typeof s === 'string' ? true : s.available !== false;
+                 return <span className={'slot' + (available ? '' : ' taken')} title={available ? 'Disponible' : 'Ocupado'} key={i}>{t ? new Date(t).toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }) : JSON.stringify(s)}</span>;
               })}</div>;
               return <div className="empty" style={{ marginTop: 10 }}>No hay slots disponibles para esa fecha y profesional.</div>;
             })()}
@@ -828,7 +829,7 @@ export default function App() {
             {summary && (() => {
               const al: any[] = summary.allergies || [], dx: any[] = summary.diagnoses || [], vit: any[] = summary.vitals || [], hist: any[] = summary.history || [];
               const timeline = [
-                ...vit.map((v: any) => ({ date: v.recordedAt || v.createdAt, cls: 'tl-vitals', title: 'Signos vitales', detail: `Temp ${v.temperatureC ?? '—'} °C · FC ${v.heartRate ?? '—'} · PA ${v.systolicBp ?? '—'}/${v.diastolicBp ?? '—'} · SpO₂ ${v.oxygenSaturation ?? '—'}%` })),
+                ...vit.map((v: any) => ({ date: v.measuredAt || v.recordedAt || v.createdAt, cls: 'tl-vitals', title: 'Signos vitales', detail: `Temp ${v.temperatureC ?? '—'} °C · FC ${v.heartRate ?? '—'} · PA ${v.systolicBp ?? '—'}/${v.diastolicBp ?? '—'} · SpO₂ ${v.oxygenSaturation ?? '—'}%` })),
                 ...hist.map((h: any) => ({ date: h.onsetDate || h.createdAt, cls: '', title: `Antecedente · ${pretty(h.historyType || '')}`, detail: h.description || '—' })),
                 ...dx.map((x: any) => ({ date: x.diagnosedAt || x.createdAt, cls: 'tl-lab', title: `Diagnóstico${x.code ? ` · ${x.code}` : ''}`, detail: x.description || x.name || '—' })),
               ].filter((e: any) => e.date).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 12);
@@ -860,7 +861,7 @@ export default function App() {
                 {vit.length === 0 ? <div className="empty">Sin signos vitales registrados.</div> :
                   <div className="table-wrap" style={{ border: '1px solid var(--line-soft)', borderRadius: 10 }}>
                     <table><thead><tr><th>Fecha</th><th>Temp °C</th><th>FC</th><th>FR</th><th>PA</th><th>SpO₂ %</th><th>Peso kg</th><th>Talla cm</th></tr></thead><tbody>
-                      {vit.map((v: any, i: number) => <tr key={i}><td className="strong">{dt(v.recordedAt || v.createdAt)}</td><td className="num">{v.temperatureC ?? '—'}</td><td className="num">{v.heartRate ?? '—'}</td><td className="num">{v.respiratoryRate ?? '—'}</td><td className="num">{v.systolicBp ?? '—'}/{v.diastolicBp ?? '—'}</td><td className="num">{v.oxygenSaturation ?? '—'}</td><td className="num">{v.weightKg ?? '—'}</td><td className="num">{v.heightCm ?? '—'}</td></tr>)}
+                      {vit.map((v: any, i: number) => <tr key={i}><td className="strong">{dt(v.measuredAt || v.recordedAt || v.createdAt)}</td><td className="num">{v.temperatureC ?? '—'}</td><td className="num">{v.heartRate ?? '—'}</td><td className="num">{v.respiratoryRate ?? '—'}</td><td className="num">{v.systolicBp ?? '—'}/{v.diastolicBp ?? '—'}</td><td className="num">{v.oxygenSaturation ?? '—'}</td><td className="num">{v.weightKg ?? '—'}</td><td className="num">{v.heightCm ?? '—'}</td></tr>)}
                     </tbody></table>
                   </div>}
                 <div className="panel-sec-t">Antecedentes ({hist.length})</div>

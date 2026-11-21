@@ -23,11 +23,13 @@ public class ClinicalDataController(TenantConnectionFactory db, ITenantContext t
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
         await using var c = await db.OpenAsync(ct);
-        async Task<List<Dictionary<string,object?>>> Q(string sql, params (string,object)[] ps){ await using var cmd=new NpgsqlCommand(sql,c); foreach(var p in ps) cmd.Parameters.AddWithValue(p.Item1,p.Item2); var list=new List<Dictionary<string,object?>>(); await using var rd=await cmd.ExecuteReaderAsync(ct); while(await rd.ReadAsync(ct)){ var d=new Dictionary<string,object?>(); for(int i=0;i<rd.FieldCount;i++) d[rd.GetName(i)]=rd.IsDBNull(i)?null:rd.GetValue(i); list.Add(d);} return list; }
-        var allergies = await Q("SELECT id,allergen,allergen_type,reaction,severity,status FROM sigm.allergies WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC", ("@t",tid),("@p",patientId));
-        var diagnoses = await Q("SELECT d.id,dc.code,dc.description,d.diagnosis_type,d.certainty,d.created_at FROM sigm.diagnoses d JOIN sigm.diagnosis_catalog dc ON dc.id=d.diagnosis_catalog_id WHERE d.tenant_id=@t AND d.patient_id=@p ORDER BY d.created_at DESC LIMIT 50", ("@t",tid),("@p",patientId));
-        var vitals = await Q("SELECT id,measured_at,temperature_c,heart_rate,respiratory_rate,systolic_bp,diastolic_bp,oxygen_saturation,weight_kg,height_cm,bmi FROM sigm.vital_signs WHERE tenant_id=@t AND patient_id=@p ORDER BY measured_at DESC LIMIT 20", ("@t",tid),("@p",patientId));
-        var history = await Q("SELECT id,history_type,description,onset_date,status FROM sigm.medical_history WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC LIMIT 50", ("@t",tid),("@p",patientId));
+        // Los portales leen camelCase; devolver las claves snake_case dejaba todas las
+        // tablas clínicas del resumen en «—» y vaciaba la línea de tiempo.
+        async Task<List<Dictionary<string,object?>>> Q(string sql, params (string,object)[] ps){ await using var cmd=new NpgsqlCommand(sql,c); foreach(var p in ps) cmd.Parameters.AddWithValue(p.Item1,p.Item2); var list=new List<Dictionary<string,object?>>(); await using var rd=await cmd.ExecuteReaderAsync(ct); while(await rd.ReadAsync(ct)){ var d=new Dictionary<string,object?>(); for(int i=0;i<rd.FieldCount;i++) d[ToCamel(rd.GetName(i))]=rd.IsDBNull(i)?null:rd.GetValue(i); list.Add(d);} return list; }
+        var allergies = await Q("SELECT id,allergen,allergen_type,reaction,severity,status,created_at FROM sigm.allergies WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC LIMIT 200", ("@t",tid),("@p",patientId));
+        var diagnoses = await Q("SELECT d.id,dc.code,dc.description,d.diagnosis_type,d.certainty,d.created_at FROM sigm.diagnoses d JOIN sigm.diagnosis_catalog dc ON dc.id=d.diagnosis_catalog_id WHERE d.tenant_id=@t AND d.patient_id=@p ORDER BY d.created_at DESC LIMIT 200", ("@t",tid),("@p",patientId));
+        var vitals = await Q("SELECT id,measured_at,temperature_c,heart_rate,respiratory_rate,systolic_bp,diastolic_bp,oxygen_saturation,weight_kg,height_cm,bmi FROM sigm.vital_signs WHERE tenant_id=@t AND patient_id=@p ORDER BY measured_at DESC LIMIT 200", ("@t",tid),("@p",patientId));
+        var history = await Q("SELECT id,history_type,description,onset_date,status,created_at FROM sigm.medical_history WHERE tenant_id=@t AND patient_id=@p ORDER BY created_at DESC LIMIT 200", ("@t",tid),("@p",patientId));
         return Ok(new { allergies, diagnoses, vitals, history });
     }
 
@@ -100,4 +102,7 @@ public class ClinicalDataController(TenantConnectionFactory db, ITenantContext t
         cmd.Parameters.AddWithValue("@st",req.Status??"ACTIVE"); cmd.Parameters.AddWithValue("@u",(object?)tenant.UserId??DBNull.Value);
         await cmd.ExecuteNonQueryAsync(ct); return Ok();
     }
+
+    private static string ToCamel(string name)
+        => string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
 }

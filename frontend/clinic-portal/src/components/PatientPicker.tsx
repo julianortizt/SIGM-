@@ -15,6 +15,8 @@ type Props = {
   style?: CSSProperties;
   /** Modo controlado: id seleccionado. */
   value?: string;
+  /** Etiqueta del id controlado cuando el paciente no está en la página cargada. */
+  valueLabel?: string;
   onChange?: (id: string) => void;
 };
 
@@ -32,6 +34,7 @@ export default function PatientPicker({
   placeholder = 'Buscar por nombre o documento…',
   style,
   value,
+  valueLabel,
   onChange,
 }: Props) {
   const [query, setQuery] = useState('');
@@ -44,7 +47,9 @@ export default function PatientPicker({
 
   const controlled = value !== undefined;
   const selectedId = controlled ? value : picked?.id ?? '';
-  const display = controlled ? (picked && picked.id === value ? labelFor(picked) : '') : picked ? labelFor(picked) : '';
+  const display = controlled
+    ? (picked && picked.id === value ? labelFor(picked) : valueLabel ?? (value ? 'Paciente seleccionado' : ''))
+    : picked ? labelFor(picked) : '';
 
   // Limpia la selección cuando el formulario se reinicia.
   useEffect(() => {

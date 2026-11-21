@@ -23,7 +23,7 @@ builder.Services.AddCors(opt =>
     opt.AddPolicy("dev", p => p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod().WithExposedHeaders("X-Total-Count"));
     opt.AddPolicy("production", p =>
     {
-      var allowedOrigins = builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>() ?? new[] { "http://localhost:3001", "http://localhost:3002", "http://localhost:3003" };
+      var allowedOrigins = builder.Configuration.GetSection("CORS:AllowedOrigins").Get<string[]>() ?? new[] { "https://hcmmedical.vercel.app" };
       p.WithOrigins(allowedOrigins)
        .AllowAnyHeader()
        .WithMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
@@ -42,7 +42,10 @@ builder.Services.AddScoped<UserSessionValidator>();
 builder.Services.AddSingleton<EmailSender>();
 builder.Services.AddScoped<AuditService>();
 builder.Services.AddScoped<DatabaseBackupService>();
-builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+if (string.Equals(builder.Configuration["Storage:Provider"], "Database", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddScoped<IFileStorageService, DatabaseFileStorageService>();
+else
+    builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddSingleton<ReminderSender>();
 builder.Services.AddHostedService<ReminderWorker>();
 builder.Services.AddHostedService<ScheduledBackupWorker>();
@@ -115,15 +118,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-// Limite de intentos por IP para autenticacion y MFA (mitiga fuerza bruta).
+// Detrás de Vercel, RemoteIpAddress es siempre el mismo proxy: usamos la IP real
+// del cliente (X-Vercel-Forwarded-For, luego X-Forwarded-For) para no agrupar a
+// todos los usuarios en la misma ventana y no permitir evadir el límite falseando un header.
+static string ClientKey(HttpContext ctx)
+{
+    var candidates = new[] { "X-Vercel-Forwarded-For", "X-Forwarded-For" };
+    foreach (var header in candidates)
+    {
+        var raw = ctx.Request.Headers[header].ToString();
+        if (string.IsNullOrWhiteSpace(raw)) continue;
+        var first = raw.Split(',')[0].Trim();
+        if (first.Length > 0 && first.Length <= 64) return first;
+    }
+    return ctx.Connection.RemoteIpAddress?.ToString() ?? "desconocido";
+}
+
+// Limite de intentos por IP del cliente para autenticacion y MFA (mitiga fuerza bruta).
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     options.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(
-        ctx.Connection.RemoteIpAddress?.ToString() ?? "desconocido",
+        ClientKey(ctx),
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(5), QueueLimit = 0 }));
     options.AddPolicy("mfa", ctx => RateLimitPartition.GetFixedWindowLimiter(
-        ctx.Connection.RemoteIpAddress?.ToString() ?? "desconocido",
+        ClientKey(ctx),
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(5), QueueLimit = 0 }));
     options.OnRejected = async (context, token) =>
     {
@@ -142,9 +161,11 @@ var app = builder.Build();
 
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+    ForwardLimit = 1
 });
 app.UseMiddleware<SecurityHeadersMiddleware>();
+app.UseMiddleware<PostgresExceptionMiddleware>();
 if (!app.Environment.IsDevelopment())
 {
     app.UseHsts();

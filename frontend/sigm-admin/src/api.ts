@@ -68,8 +68,13 @@ export function getToken(): string | null {
 
 export function getSession(): Session | null {
   try {
-    return JSON.parse(localStorage.getItem('sigm_user') || 'null');
+    const raw = localStorage.getItem('sigm_user');
+    if (!raw) return null;
+    const s = JSON.parse(raw) as Session;
+    if (s?.expiresAt && new Date(s.expiresAt).getTime() <= Date.now()) { clearSession(); return null; }
+    return s;
   } catch {
+    clearSession();
     return null;
   }
 }
@@ -104,9 +109,13 @@ async function req<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API}${path}`, { ...init, headers });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  let data: any = null;
+  if (text) { try { data = JSON.parse(text); } catch { data = text; } }
   if (!res.ok) {
-    if (res.status === 401 && !data?.mfaRequired) clearSession();
+    if (res.status === 401 && !data?.mfaRequired) {
+      clearSession();
+      window.location.assign(import.meta.env.BASE_URL || '/');
+    }
     throw new ApiError(data?.message || data?.title || res.statusText || `Error ${res.status}`, res.status, data);
   }
   return data as T;
@@ -181,8 +190,12 @@ async function upload(path: string, form: FormData): Promise<any> {
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${API}${path}`, { method: 'POST', body: form, headers });
   const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
-  if (!res.ok) throw new ApiError(data?.message || res.statusText, res.status, data);
+  let data: any = null;
+  if (text) { try { data = JSON.parse(text); } catch { data = text; } }
+  if (!res.ok) {
+    if (res.status === 401) { clearSession(); window.location.assign(import.meta.env.BASE_URL || '/'); }
+    throw new ApiError(data?.message || res.statusText, res.status, data);
+  }
   return data;
 }
 

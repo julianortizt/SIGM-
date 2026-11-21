@@ -20,6 +20,7 @@ public class PlatformController(TenantConnectionFactory db) : ControllerBase
     /// <summary>Catálogo de módulos conmutables por tenant (feature_code -> nombre).</summary>
     public static readonly (string Code, string Name, string Description)[] Modules =
     [
+        ("clinical", "Historia clínica", "Atenciones, notas, diagnósticos y signos vitales"),
         ("appointments", "Agenda / Citas", "Agendamiento institucional"),
         ("waiting_list", "Lista de espera", "Administración de lista de espera"),
         ("reminders", "Recordatorios", "Recordatorios automáticos de citas"),
@@ -33,6 +34,7 @@ public class PlatformController(TenantConnectionFactory db) : ControllerBase
     ];
 
     [HttpGet("modules")]
+    [RequirePermission("platform.tenants.manage")]
     public IActionResult ModulesCatalog() => Ok(Modules.Select(m => new { code = m.Code, name = m.Name, description = m.Description }));
 
     [HttpGet("tenants")]
@@ -116,8 +118,8 @@ public class PlatformController(TenantConnectionFactory db) : ControllerBase
         if (!Modules.Any(m => m.Code == code)) return BadRequest(new { message = $"Módulo desconocido: {code}." });
         await using var c = await db.OpenAsync(ct, platform: true);
         await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.tenant_features(tenant_id, feature_code, enabled, config, updated_at)
-            VALUES(@t, @f, @e, '{}'::jsonb, now())
-            ON CONFLICT (tenant_id, feature_code) DO UPDATE SET enabled=EXCLUDED.enabled, updated_at=now()", c);
+            VALUES(@t, @f, @e, '{""platformManaged"":true}'::jsonb, now())
+            ON CONFLICT (tenant_id, feature_code) DO UPDATE SET enabled=EXCLUDED.enabled, config=EXCLUDED.config, updated_at=now()", c);
         cmd.Parameters.AddWithValue("@t", id); cmd.Parameters.AddWithValue("@f", code); cmd.Parameters.AddWithValue("@e", req.Enabled);
         await cmd.ExecuteNonQueryAsync(ct);
         return Ok(new { tenantId = id, featureCode = code, enabled = req.Enabled });
