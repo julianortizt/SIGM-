@@ -45,10 +45,14 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
     { "source": "/health(.*)", "destination": { "service": "api" } },
-    { "source": "/app/:path*", "destination": { "service": "clinic" } },
-    { "source": "/consultorios/:path*", "destination": { "service": "practice" } },
-    { "source": "/pacientes/:path*", "destination": { "service": "patient" } },
-    { "source": "/admin/:path*", "destination": { "service": "admin" } },
-    { "source": "/:path*", "destination": { "service": "welcome" } }
+    { "source": "/app", "destination": { "service": "clinic" } },
+    { "source": "/app/(.*)", "destination": { "service": "clinic" } },
+    { "source": "/consultorios", "destination": { "service": "practice" } },
+    { "source": "/consultorios/(.*)", "destination": { "service": "practice" } },
+    { "source": "/pacientes", "destination": { "service": "patient" } },
+    { "source": "/pacientes/(.*)", "destination": { "service": "patient" } },
+    { "source": "/admin", "destination": { "service": "admin" } },
+    { "source": "/admin/(.*)", "destination": { "service": "admin" } },
+    { "source": "/(.*)", "destination": { "service": "welcome" } }
   ]
 }
