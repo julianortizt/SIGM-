@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
@@ -103,6 +104,24 @@ public class ClinicalDataController(TenantConnectionFactory db, ITenantContext t
         await cmd.ExecuteNonQueryAsync(ct); return Ok();
     }
 
+    /// <summary>
+    /// Convierte un identificador SQL snake_case a camelCase. El portales leen
+    /// <c>allergenType</c>/<c>createdAt</c>; bajar sólo la primera letra dejaba
+    /// <c>allergen_type</c> y la línea de tiempo aparecía vacía.
+    /// </summary>
     private static string ToCamel(string name)
-        => string.IsNullOrEmpty(name) ? name : char.ToLowerInvariant(name[0]) + name[1..];
+    {
+        if (string.IsNullOrEmpty(name)) return name;
+        var sb = new StringBuilder(name.Length);
+        var upper = false;
+        var start = name[0] == '_' ? 1 : 0;
+        for (var i = start; i < name.Length; i++)
+        {
+            var ch = name[i];
+            if (ch == '_') { upper = true; continue; }
+            sb.Append(upper ? char.ToUpperInvariant(ch) : sb.Length == 0 ? char.ToLowerInvariant(ch) : ch);
+            upper = false;
+        }
+        return sb.ToString();
+    }
 }

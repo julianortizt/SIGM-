@@ -161,7 +161,9 @@ Se revisaron backend, los 5 frontends, la base de datos (migraciones 001–023, 
 - Mapeos EF corregidos a columnas reales (`organization_type`, `duration_minutes`).
 
 **Base de datos y despliegue**
-- Migración `023`: RLS en `user_preferences` y `file_blobs`, GRANTs a `sigm_platform`, REVOKE de DML a `sigm_app` en tablas de plataforma, índice de adendas y tabla `sigm.file_blobs`.
+- Migración `023`: RLS en `user_preferences` y `file_blobs`, GRANTs a `sigm_platform`, REVOKE de DML a `sigm_app` en tablas de plataforma, índice de adendas y tabla `sigm.file_blobs`. `run_all.sql` ahora incluye 023 y 024.
+- Migración `024`: el trigger `trg_validate_form_field_tenant` rechazaba los campos de los formularios globales (`tenant_id IS NULL`) con `23514`. Ahora las plantillas globales aceptan campos por tenant y los formularios propios siguen aislados.
+- `ToCamel` de `/clinical/patients/{id}/summary` convertía correctamente la primera letra pero **no** `snake_case`: `allergen_type` seguía llegando a los portales y la línea de tiempo clínica quedaba vacía. Ahora convierte `allergen_type → allergenType`, `created_at → createdAt`, etc.
 - `Storage__Provider=Database` en Vercel: los documentos se guardan en Neon (el filesystem de una función serverless es efímero).
 - Contexto de tenant con `set_config(..., false)` y limpieza del pool (evita que una petición herede el tenant de otra).
 - CORS en producción por defecto `https://hcmmedical.vercel.app`; `ForwardLimit=1`.

@@ -66,4 +66,10 @@
 \echo 'SIGM Cloud :: bloqueo MFA y doble aprobacion de scripts'
 \ir migrations/022_mfa_lockout_script_approval.sql
 
+\echo 'SIGM Cloud :: endurecimiento de privilegios y almacenamiento durable'
+\ir migrations/023_hardening_and_file_blobs.sql
+
+\echo 'SIGM Cloud :: campos de formularios globales por tenant'
+\ir migrations/024_form_field_tenant_trigger.sql
+
 \echo 'SIGM Cloud :: base de datos creada correctamente'
