@@ -45,36 +45,10 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
     { "source": "/health(.*)", "destination": { "service": "api" } },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "eq": "api.TU_DOMINIO.com" } }],
-      "destination": { "service": "api" }
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "eq": "app.TU_DOMINIO.com" } }],
-      "destination": { "service": "clinic" }
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "eq": "consultorios.TU_DOMINIO.com" } }],
-      "destination": { "service": "practice" }
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "eq": "pacientes.TU_DOMINIO.com" } }],
-      "destination": { "service": "patient" }
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "eq": "admin.TU_DOMINIO.com" } }],
-      "destination": { "service": "admin" }
-    },
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": { "eq": "www.TU_DOMINIO.com" } }],
-      "destination": { "service": "welcome" }
-    },
-    { "source": "/(.*)", "destination": { "service": "welcome" } }
+    { "source": "/app/:path*", "destination": { "service": "clinic" } },
+    { "source": "/consultorios/:path*", "destination": { "service": "practice" } },
+    { "source": "/pacientes/:path*", "destination": { "service": "patient" } },
+    { "source": "/admin/:path*", "destination": { "service": "admin" } },
+    { "source": "/:path*", "destination": { "service": "welcome" } }
   ]
 }

@@ -14,7 +14,8 @@ type PortalModule = {
   subtitle: string;
   description: string;
   items: string[];
-  port: number;
+  /** Ruta del portal dentro del mismo dominio (sin puerto). */
+  href: string;
   cta: string;
   icon: ModuleIcon;
   tone: "teal" | "violet" | "rose" | "slate";
@@ -27,7 +28,7 @@ const MODULES: PortalModule[] = [
     subtitle: "Gestión médica institucional y multi-especialidad",
     icon: "hospital",
     tone: "teal",
-    port: 5173,
+    href: "/app/",
     cta: "Acceder a Clínicas",
     description:
       "Administre hospitales, centros médicos y clínicas con múltiples especialidades, profesionales y sedes.",
@@ -45,7 +46,7 @@ const MODULES: PortalModule[] = [
     subtitle: "Gestión clínica individual desde la nube",
     icon: "practice",
     tone: "violet",
-    port: 5174,
+    href: "/consultorios/",
     cta: "Acceder a Consultorios",
     description:
       "Ideal para médicos independientes y consultorios particulares que necesiten trabajar desde cualquier lugar vía Internet.",
@@ -63,7 +64,7 @@ const MODULES: PortalModule[] = [
     subtitle: "Módulo de pacientes y gestión de clientes",
     icon: "patients",
     tone: "rose",
-    port: 5175,
+    href: "/pacientes/",
     cta: "Acceder a Pacientes",
     description:
       "Expediente clínico completo, seguimiento personalizado y portal para citas y resultados.",
@@ -80,7 +81,7 @@ const MODULES: PortalModule[] = [
     subtitle: "Administración y operación del servicio",
     icon: "platform",
     tone: "slate",
-    port: 3002,
+    href: "/admin/",
     cta: "Acceder a Plataforma",
     description:
       "Consola de operación para gestionar organizaciones, planes, usuarios y la configuración global del sistema.",
@@ -92,13 +93,6 @@ const MODULES: PortalModule[] = [
     ],
   },
 ];
-
-/** URL del portal en el mismo host desde el que se abrió la landing. */
-function portalUrl(port: number, path = "/"): string {
-  const protocol = window.location.protocol === "https:" ? "https:" : "http:";
-  const hostname = window.location.hostname || "localhost";
-  return `${protocol}//${hostname}:${port}${path}`;
-}
 
 function ModuleIcon({ kind }: { kind: ModuleIcon }) {
   return (
@@ -250,7 +244,7 @@ export default function LandingPage() {
                   ))}
                 </ul>
 
-                <a className="mod-btn" href={portalUrl(module.port)}>
+                <a className="mod-btn" href={module.href}>
                   {module.cta}
                   <ArrowIcon />
                 </a>
