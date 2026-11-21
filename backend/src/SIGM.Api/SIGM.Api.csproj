@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.15" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SIGM.Shared\SIGM.Shared.csproj" />
+    <ProjectReference Include="..\SIGM.Infrastructure\SIGM.Infrastructure.csproj" />
+    <ProjectReference Include="..\SIGM.Identity\SIGM.Identity.csproj" />
+    <ProjectReference Include="..\SIGM.Tenancy\SIGM.Tenancy.csproj" />
+    <ProjectReference Include="..\SIGM.Patients\SIGM.Patients.csproj" />
+    <ProjectReference Include="..\SIGM.Clinical\SIGM.Clinical.csproj" />
+    <ProjectReference Include="..\SIGM.Scheduling\SIGM.Scheduling.csproj" />
+    <ProjectReference Include="..\SIGM.Billing\SIGM.Billing.csproj" />
+    <ProjectReference Include="..\SIGM.Documents\SIGM.Documents.csproj" />
+    <ProjectReference Include="..\SIGM.Audit\SIGM.Audit.csproj" />
+  </ItemGroup>
+
+</Project>

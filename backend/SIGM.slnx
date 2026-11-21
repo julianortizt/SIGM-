@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SIGM.Api/SIGM.Api.csproj" />
+    <Project Path="src/SIGM.Audit/SIGM.Audit.csproj" />
+    <Project Path="src/SIGM.Billing/SIGM.Billing.csproj" />
+    <Project Path="src/SIGM.Clinical/SIGM.Clinical.csproj" />
+    <Project Path="src/SIGM.Documents/SIGM.Documents.csproj" />
+    <Project Path="src/SIGM.Identity/SIGM.Identity.csproj" />
+    <Project Path="src/SIGM.Infrastructure/SIGM.Infrastructure.csproj" />
+    <Project Path="src/SIGM.Patients/SIGM.Patients.csproj" />
+    <Project Path="src/SIGM.Scheduling/SIGM.Scheduling.csproj" />
+    <Project Path="src/SIGM.Shared/SIGM.Shared.csproj" />
+    <Project Path="src/SIGM.Tenancy/SIGM.Tenancy.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SIGM.Api.Tests/SIGM.Api.Tests.csproj" />
+  </Folder>
+</Solution>

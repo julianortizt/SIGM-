@@ -1,0 +1,6 @@
+@SIGM.Api_HostAddress = http://localhost:5067
+
+GET {{SIGM.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

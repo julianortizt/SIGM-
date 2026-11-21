@@ -1,0 +1,80 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "api": {
+      "root": "backend/",
+      "runtime": "container",
+      "entrypoint": "Dockerfile.vercel"
+    },
+    "clinic": {
+      "root": "frontend/clinic-portal",
+      "framework": "vite",
+      "installCommand": "npm ci",
+      "buildCommand": "VITE_API_URL=/api VITE_PRODUCT=CLINIC VITE_BRAND='SIGM Clínicas' npm run build",
+      "outputDirectory": "dist"
+    },
+    "practice": {
+      "root": "frontend/practice-portal",
+      "framework": "vite",
+      "installCommand": "npm ci",
+      "buildCommand": "VITE_API_URL=/api VITE_PRODUCT=PRACTICE VITE_BRAND='SIGM Consultorios' npm run build",
+      "outputDirectory": "dist"
+    },
+    "patient": {
+      "root": "frontend/patient-portal",
+      "framework": "vite",
+      "installCommand": "npm ci",
+      "buildCommand": "VITE_API_URL=/api VITE_PRODUCT=PATIENT VITE_BRAND='SIGM Pacientes' npm run build",
+      "outputDirectory": "dist"
+    },
+    "admin": {
+      "root": "frontend/sigm-admin",
+      "framework": "vite",
+      "installCommand": "npm ci",
+      "buildCommand": "VITE_API_URL=/api npm run build",
+      "outputDirectory": "dist"
+    },
+    "welcome": {
+      "root": "frontend/sigm-welcome",
+      "framework": "vite",
+      "installCommand": "npm ci",
+      "buildCommand": "VITE_API_URL=/api npm run build",
+      "outputDirectory": "dist"
+    }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": { "service": "api" } },
+    { "source": "/health(.*)", "destination": { "service": "api" } },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "eq": "api.TU_DOMINIO.com" } }],
+      "destination": { "service": "api" }
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "eq": "app.TU_DOMINIO.com" } }],
+      "destination": { "service": "clinic" }
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "eq": "consultorios.TU_DOMINIO.com" } }],
+      "destination": { "service": "practice" }
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "eq": "pacientes.TU_DOMINIO.com" } }],
+      "destination": { "service": "patient" }
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "eq": "admin.TU_DOMINIO.com" } }],
+      "destination": { "service": "admin" }
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": { "eq": "www.TU_DOMINIO.com" } }],
+      "destination": { "service": "welcome" }
+    },
+    { "source": "/(.*)", "destination": { "service": "welcome" } }
+  ]
+}

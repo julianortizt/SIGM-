@@ -1,0 +1,7 @@
+/* Acento del portal de pacientes — verde salud */
+:root {
+  --accent: #0d9488;
+  --accent-strong: #0b6e66;
+  --accent-soft: #dff3f0;
+  --accent-line: #a7ddd5;
+}

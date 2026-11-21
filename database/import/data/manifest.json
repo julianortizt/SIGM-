@@ -1,0 +1,59 @@
+{
+  "source": "https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx",
+  "retrieved_at": "2026-11-12T22:57:50.063879+00:00",
+  "catalogs": {
+    "CIE10": {
+      "label": "CIE-10 Colombia",
+      "source": "https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx?Code=CIE10",
+      "rows": 12634,
+      "duplicates_discarded": 0,
+      "csv": "import/data/cie10.csv",
+      "sha256": "0c6090267b919dd122a7392ecf1934c37b5b957c9087cb9de4fdd3f4860f1332",
+      "columns": [
+        "code",
+        "description",
+        "chapter",
+        "chapter_code",
+        "group_code",
+        "is_active"
+      ],
+      "minimum_rows": 12000,
+      "seed": "seeds/006_catalogs_cie10.sql"
+    },
+    "CUPS": {
+      "label": "CUPS",
+      "source": "https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx?Code=CUPS",
+      "rows": 10024,
+      "duplicates_discarded": 0,
+      "csv": "import/data/cups.csv",
+      "sha256": "2e70232f1a958c9ba290d9e62e428993bd2f7c928d1ab2c3f118b6fc4b3f106f",
+      "columns": [
+        "code",
+        "name",
+        "chapter",
+        "is_active"
+      ],
+      "minimum_rows": 9500,
+      "seed": "seeds/007_catalogs_cups.sql"
+    },
+    "IUM": {
+      "label": "IUM (medicamentos)",
+      "source": "https://web.sispro.gov.co/WebPublico/Consultas/ConsultarDetalleReferenciaBasica.aspx?Code=IUM",
+      "rows": 34642,
+      "duplicates_discarded": 0,
+      "csv": "import/data/ium.csv",
+      "sha256": "84d0be316e5899e473f0fe5f2b264576e6c5fd1a445fd55db90ac7617c263b7c",
+      "columns": [
+        "code",
+        "name",
+        "presentation",
+        "concentration",
+        "pharmaceutical_form",
+        "route",
+        "is_active"
+      ],
+      "minimum_rows": 33000,
+      "seed": "seeds/008_catalogs_ium.sql"
+    }
+  }
+}

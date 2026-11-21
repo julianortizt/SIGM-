@@ -1,0 +1,51 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+TestResults/
+
+# Node
+node_modules/
+dist/
+dist-ssr/
+*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env/secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+!**/.env.development
+.env.vercel
+.vercel/
+docs/CREDENCIALES.md
+docs/ACCESOS.txt
+*.local.json
+appsettings.*.Local.json
+
+# IDE/OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Temp
+*.tmp
+*.log
+log.txt
+*.bak
+
+# Backups/dumps de base de datos (pueden contener datos clínicos)
+backend/backups/
+*.dump
+*.dump.gz
+database/import/data/*.csv
+database/import/data/*.sql.tmp

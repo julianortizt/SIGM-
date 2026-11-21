@@ -1,0 +1,23 @@
+# Imagen para el servicio "api" de Vercel (Services + Container runtime).
+# Contexto de build: la carpeta backend/ (contiene SIGM.slnx y src/).
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY SIGM.slnx ./
+COPY src ./src
+RUN dotnet restore SIGM.slnx
+RUN dotnet publish src/SIGM.Api/SIGM.Api.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+
+# Vercel enruta el tráfico al puerto 80 por defecto (variable PORT).
+# Detrás del proxy de Vercel hay que confiar en X-Forwarded-Proto para
+# que UseHttpsRedirection no entre en bucle redirect http -> https -> http.
+ENV ASPNETCORE_URLS=http://+:80 \
+    ASPNETCORE_ENVIRONMENT=Production \
+    ASPNETCORE_FORWARDEDHEADERS_ENABLED=true \
+    DOTNET_RUNNING_IN_CONTAINER=true
+
+EXPOSE 80
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "SIGM.Api.dll"]

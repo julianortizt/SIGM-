@@ -1,0 +1,86 @@
+services:
+  postgres:
+    image: postgres:18
+    container_name: sigm-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: sigm_cloud_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ../database:/docker-entrypoint-initdb.d-src:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sigm_cloud_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    container_name: sigm-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redisdata:/data
+
+  api:
+    build:
+      context: ../backend
+      dockerfile: ../infrastructure/docker/Dockerfile.api
+    container_name: sigm-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      DOTNET_ROOT: /usr/share/dotnet
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=sigm_cloud_dev;Username=sigm_app;Password=change_me_app
+      ConnectionStrings__Platform: Host=postgres;Port=5432;Database=sigm_cloud_dev;Username=postgres;Password=postgres
+      Redis__Connection: redis:6379
+      Jwt__Issuer: sigm-cloud
+      Jwt__Audience: sigm-cloud-clients
+      Jwt__Key: "DEV_ONLY_CHANGE_ME_TO_A_LONG_RANDOM_SECRET_KEY_32+"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  clinic-portal:
+    build:
+      context: ../frontend/clinic-portal
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_PRODUCT: CLINIC
+    ports:
+      - "3001:80"
+    depends_on: [api]
+
+  practice-portal:
+    build:
+      context: ../frontend/practice-portal
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_PRODUCT: PRACTICE
+    ports:
+      - "3002:80"
+    depends_on: [api]
+
+  patient-portal:
+    build:
+      context: ../frontend/patient-portal
+      dockerfile: ../../infrastructure/docker/Dockerfile.frontend
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_PRODUCT: PATIENT
+    ports:
+      - "3003:80"
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  redisdata:

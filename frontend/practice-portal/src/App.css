@@ -1,0 +1,54 @@
+/* Acento del portal clínico — teal clínico */
+:root {
+  --accent: #0e7490;
+  --accent-strong: #0b5a70;
+  --accent-soft: #e0f2f7;
+  --accent-line: #a5d8e4;
+}
+
+/* Menú móvil (hamburguesa) */
+.mobile-menu-btn {
+  display: none;
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1001;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.mobile-menu-btn .bar {
+  display: block;
+  width: 25px;
+  height: 3px;
+  margin: 5px 0;
+  transition: all 0.3s ease;
+  background-color: #fff;
+}
+.mobile-menu-btn .bar:nth-child(2) { transition: transform 0.2s ease; }
+.mobile-menu-btn.active .bar:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+.mobile-menu-btn.active .bar:nth-child(2) { opacity: 0; }
+.mobile-menu-btn.active .bar:nth-child(3) { transform: rotate(-45deg) translate(7px, -6px); }
+
+@media (max-width: 960px) {
+  .mobile-menu-btn {
+    display: block;
+  }
+  .sidebar {
+    display: block !important;
+    width: 260px !important;
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 1000;
+    background: #0d1b26;
+    transform: translateX(0) !important;
+  }
+  .main {
+    margin-left: 260px !important;
+  }
+  .topbar {
+    padding-left: 260px !important;
+  }
+}
