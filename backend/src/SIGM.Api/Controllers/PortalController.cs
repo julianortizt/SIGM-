@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Npgsql;
+using SIGM.Api.Security;
 using SIGM.Api.Services;
 using SIGM.Infrastructure.Persistence;
 using SIGM.Shared.Tenancy;
@@ -15,6 +16,7 @@ namespace SIGM.Api.Controllers;
 [ApiController]
 [Route("api/v1/portal")]
 [Authorize]
+[RequirePermission("portal.patient.read_own")]
 public class PortalController(TenantConnectionFactory db, ITenantContext tenant, IFileStorageService storage, AuditService audit) : ControllerBase
 {
     [HttpGet("me")]

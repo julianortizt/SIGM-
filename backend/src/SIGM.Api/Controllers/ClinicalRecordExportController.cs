@@ -29,6 +29,12 @@ public class ClinicalRecordExportController(TenantConnectionFactory db, ITenantC
     {
         var snapshot = await LoadAsync(patientId, ct);
         if (snapshot is null) return NotFound(new { message = "Paciente no encontrado en la organización." });
+
+        var bytes = JsonSerializer.SerializeToUtf8Bytes(snapshot);
+        var hash = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+        await audit.LogAsync("patient", patientId, "EXPORT", null, new { format = "json", bytes = bytes.Length, sha256 = hash },
+            HttpContext.Connection.RemoteIpAddress?.ToString(), ct);
+        Response.Headers["X-Document-Sha256"] = hash;
         return Ok(snapshot);
     }
 

@@ -97,9 +97,25 @@ database/
 │   ├── security-rls.md
 │   └── deployment.md
 ├── scripts/
-│   └── validate.ps1
+│   ├── validate.ps1
+│   ├── seed_demo_full.sql                  (tenant CLINIC-DEMO, 2 pacientes, usuarios base)
+│   ├── seed_demo_clinical.sql              (6 pacientes, tarifario, usuario paciente)
+│   ├── seed_clinic_showcase.sql            (citas, atenciones, notas, alergias)
+│   └── seed_demo_clinical_details.sql      (vitales, antecedentes, dx, laboratorio, fórmulas, facturación)
 └── run_all.sql
 ```
+
+Orden de carga de los datos demo (todos idempotentes):
+
+```bash
+psql ... -f database/run_all.sql
+psql ... -f database/scripts/seed_demo_full.sql
+psql ... -f database/scripts/seed_demo_clinical.sql
+psql ... -f database/scripts/seed_clinic_showcase.sql
+psql ... -f database/scripts/seed_demo_clinical_details.sql
+```
+
+Resultado: 8 pacientes, 8 atenciones, 6 notas (4 firmadas), 17 signos vitales, 17 alergias, 8 diagnósticos, 12 resultados de laboratorio, 8 fórmulas y 8 facturas. Credenciales y flujo en `docs/functional-site.md`.
 
 ## Ejecución rápida
 

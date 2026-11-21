@@ -36,6 +36,26 @@ public class UsersController(SigmDbContext db, ITenantContext tenant, TenantConn
         await using var tx = await conn.BeginTransactionAsync(ct);
 
         var email = req.Email.Trim().ToLowerInvariant();
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(req.FullName))
+            return BadRequest(new { message = "Correo y nombre completo son obligatorios." });
+
+        var requestedRoles = (req.RoleCodes ?? [])
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim().ToUpperInvariant())
+            .Distinct()
+            .ToArray();
+        var validRoles = new List<string>();
+        foreach (var code in requestedRoles)
+        {
+            await using var q = new NpgsqlCommand(@"SELECT 1 FROM sigm.roles
+                WHERE code=@c AND (tenant_id IS NULL OR tenant_id=@t) LIMIT 1", conn, tx);
+            q.Parameters.AddWithValue("@c", code); q.Parameters.AddWithValue("@t", tid);
+            if (await q.ExecuteScalarAsync(ct) is not null) validRoles.Add(code);
+        }
+        var invalidRoles = requestedRoles.Except(validRoles).ToArray();
+        if (invalidRoles.Length > 0)
+            return BadRequest(new { message = "Roles no válidos para esta organización: " + string.Join(", ", invalidRoles) });
+
         var userId = Guid.NewGuid();
         var hash = PasswordService.Hash(req.Password ?? Guid.NewGuid().ToString("N"));
 
@@ -55,7 +75,7 @@ public class UsersController(SigmDbContext db, ITenantContext tenant, TenantConn
         await using (var cmd = new NpgsqlCommand(@"INSERT INTO sigm.user_tenants(tenant_id,user_id,status,joined_at) VALUES(@tid,@uid,'ACTIVE',now()) ON CONFLICT DO NOTHING", conn, tx))
         { cmd.Parameters.AddWithValue("@tid", tid); cmd.Parameters.AddWithValue("@uid", userId); await cmd.ExecuteNonQueryAsync(ct); }
 
-        foreach (var code in req.RoleCodes ?? [])
+        foreach (var code in validRoles)
         {
             await using var cmd = new NpgsqlCommand(@"INSERT INTO sigm.user_roles(tenant_id,user_id,role_id)
                 SELECT @tid,@uid,id FROM sigm.roles WHERE code=@c AND (tenant_id IS NULL OR tenant_id=@tid) LIMIT 1

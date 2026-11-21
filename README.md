@@ -21,6 +21,19 @@ Sitio funcionando en **https://hcmmedical.vercel.app** (un solo proyecto Vercel 
 
 Si se compra un dominio propio, se pueden añadir subdominios (`app.`, `consultorios.`, etc.) en `vercel.json` + DNS; mientras tanto, las rutas anteriores son la forma oficial de acceso. Detalles en `infrastructure/VERCEL-DEPLOY.md`.
 
+### Accesos demo
+Todos usan la organización `CLINIC-DEMO` en el login (excepto el superadmin, que entra sin organización):
+
+| Rol | Correo | Contraseña |
+|---|---|---|
+| Administrador | `admin@demo.sigm.local` | `Demo12345!` |
+| Médico | `doctor@demo.sigm.local` | `Doctor123!` |
+| Recepción | `recepcion@demo.sigm.local` | `Recep123!` |
+| Paciente | `ana.perez@ejemplo.test` | `Demo12345!` |
+| Superadmin | `soporte@sigm.cloud` | `Soporte2026!` |
+
+Las 8 historias clínicas demo (con vitales, antecedentes, diagnósticos, laboratorio, fórmulas y facturación) se cargan con los scripts de `database/scripts/` en este orden: `run_all.sql` → `seed_demo_full.sql` → `seed_demo_clinical.sql` → `seed_clinic_showcase.sql` → `seed_demo_clinical_details.sql`. Ver `docs/functional-site.md`.
+
 ## Estado
 - **Base de datos (PostgreSQL 18):** completa y validada en `database/` (22 migraciones, seeds con catálogos CIE-10/CUPS/IUM desde SISPRO, RLS, pruebas y validador). Ver `database/README.md`.
 - **Backend (.NET 10 / ASP.NET Core):** la API en `backend/src/SIGM.Api` concentra la lógica real: JWT/MFA, multi-tenant + RLS, permisos, agenda, clínico, facturación, documentos y auditoría (~190 rutas). Los otros proyectos de la solución son cáscaras vacías. ¿Para qué sirve? Ver `infrastructure/VERCEL-DEPLOY.md` §0.

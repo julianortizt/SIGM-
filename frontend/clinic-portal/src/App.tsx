@@ -1095,7 +1095,7 @@ export default function App() {
         {tab === 'prescriptions' && <section className="panel">
           <div className="panel-h"><div><div className="panel-t"><Ico name="pill" /> Recetas y fórmulas</div><div className="panel-d">{rx.length} recetas emitidas</div></div></div>
           <div className="panel-b">
-            <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.createPrescription({ encounterId: fd.get('encounterId'), patientId: fd.get('patientId'), notes: fd.get('notes') || null, items: [{ medicationName: fd.get('medicationName'), dose: fd.get('dose') || null, frequency: fd.get('frequency') || null, route: fd.get('route') || null, duration: fd.get('duration') || null, quantity: Number(fd.get('quantity') || 1), instructions: fd.get('instructions') || null }] }), f); }}>
+            <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.createPrescription({ encounterId: fd.get('encounterId'), patientId: fd.get('patientId'), notes: fd.get('notes') || null, items: [{ medicationName: fd.get('medicationName'), dose: fd.get('dose') || null, frequency: fd.get('frequency') || null, route: fd.get('route') || null, durationDays: Number(fd.get('durationDays') || 0) || null, quantity: String(fd.get('quantity') || '1'), instructions: fd.get('instructions') || null }] }), f); }}>
               <div className="fields-grid">
                 <PatientPicker name="patientId" required />
                 <label className="field" style={{ gridColumn: 'span 2' }}><span>Atención</span><select name="encounterId" required><option value="">Seleccionar…</option>{encounters.map(e2 => <option key={e2.id} value={e2.id}>{dt(e2.encounterDate)} · {pretty(e2.encounterType)}</option>)}</select></label>
@@ -1103,8 +1103,8 @@ export default function App() {
                 <label className="field"><span>Dosis</span><input name="dose" placeholder="500 mg" /></label>
                 <label className="field"><span>Frecuencia</span><input name="frequency" placeholder="c/8 h" /></label>
                 <label className="field"><span>Vía</span><input name="route" placeholder="Oral" /></label>
-                <label className="field"><span>Duración</span><input name="duration" placeholder="7 días" /></label>
-                <label className="field"><span>Cantidad</span><input name="quantity" type="number" defaultValue={1} /></label>
+                <label className="field"><span>Duración (días)</span><input name="durationDays" type="number" min={1} defaultValue={7} /></label>
+                <label className="field"><span>Cantidad</span><input name="quantity" defaultValue="1" /></label>
                 <label className="field" style={{ gridColumn: '1 / -1' }}><span>Indicaciones</span><input name="instructions" placeholder="Indicaciones para el paciente" /></label>
               </div>
               <button className="btn" disabled={busy} style={{ marginTop: 12 }}><Ico name="pill" size={14} /> Emitir receta</button>

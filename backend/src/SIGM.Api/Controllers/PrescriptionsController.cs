@@ -12,7 +12,7 @@ namespace SIGM.Api.Controllers;
 [Authorize]
 public class PrescriptionsController(TenantConnectionFactory db, ITenantContext tenant) : ControllerBase
 {
-    public record ItemReq(Guid? MedicationCatalogId, string MedicationName, string? Dose, string? Frequency, string? Route, string? Duration, int Quantity, string? Instructions);
+    public record ItemReq(Guid? MedicationCatalogId, string MedicationName, string? Dose, string? Frequency, string? Route, int? DurationDays, string? Quantity, string? Instructions);
     public record CreateReq(Guid EncounterId, Guid PatientId, string? Notes, ItemReq[] Items);
 
     [HttpGet]
@@ -40,11 +40,11 @@ public class PrescriptionsController(TenantConnectionFactory db, ITenantContext 
         { cmd.Parameters.AddWithValue("@id",id); cmd.Parameters.AddWithValue("@t",tid); cmd.Parameters.AddWithValue("@e",req.EncounterId); cmd.Parameters.AddWithValue("@p",req.PatientId); cmd.Parameters.AddWithValue("@u",(object?)tenant.UserId??DBNull.Value); cmd.Parameters.AddWithValue("@n",(object?)req.Notes??DBNull.Value); number=(string?)await cmd.ExecuteScalarAsync(ct); }
         foreach (var it in req.Items ?? [])
         {
-            await using var ic = new NpgsqlCommand(@"INSERT INTO sigm.prescription_items(id,tenant_id,prescription_id,medication_catalog_id,medication_name,dose,frequency,route,duration,quantity,instructions)
+            await using var ic = new NpgsqlCommand(@"INSERT INTO sigm.prescription_items(id,tenant_id,prescription_id,medication_catalog_id,medication_name,dose,frequency,route,duration_days,quantity,instructions)
                 VALUES(gen_random_uuid(),@t,@pid,@mid,@name,@dose,@freq,@route,@dur,@q,@ins)", c, tx);
             ic.Parameters.AddWithValue("@t",tid); ic.Parameters.AddWithValue("@pid",id); ic.Parameters.AddWithValue("@mid",(object?)it.MedicationCatalogId??DBNull.Value);
             ic.Parameters.AddWithValue("@name",it.MedicationName); ic.Parameters.AddWithValue("@dose",(object?)it.Dose??DBNull.Value); ic.Parameters.AddWithValue("@freq",(object?)it.Frequency??DBNull.Value);
-            ic.Parameters.AddWithValue("@route",(object?)it.Route??DBNull.Value); ic.Parameters.AddWithValue("@dur",(object?)it.Duration??DBNull.Value); ic.Parameters.AddWithValue("@q",it.Quantity); ic.Parameters.AddWithValue("@ins",(object?)it.Instructions??DBNull.Value);
+            ic.Parameters.AddWithValue("@route",(object?)it.Route??DBNull.Value); ic.Parameters.AddWithValue("@dur",(object?)it.DurationDays??DBNull.Value); ic.Parameters.AddWithValue("@q",(object?)it.Quantity??DBNull.Value); ic.Parameters.AddWithValue("@ins",(object?)it.Instructions??DBNull.Value);
             await ic.ExecuteNonQueryAsync(ct);
         }
         await tx.CommitAsync(ct); return Ok(new{id, prescriptionNumber=number});
@@ -56,10 +56,10 @@ public class PrescriptionsController(TenantConnectionFactory db, ITenantContext 
     {
         if (tenant.TenantId is not Guid tid) return BadRequest();
         await using var c = await db.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand("SELECT id,medication_name,dose,frequency,route,duration,quantity,instructions FROM sigm.prescription_items WHERE tenant_id=@t AND prescription_id=@p", c);
+        await using var cmd = new NpgsqlCommand("SELECT id,medication_name,dose,frequency,route,duration_days,quantity,instructions FROM sigm.prescription_items WHERE tenant_id=@t AND prescription_id=@p", c);
         cmd.Parameters.AddWithValue("@t",tid); cmd.Parameters.AddWithValue("@p",id);
         var list=new List<object>(); await using var rd=await cmd.ExecuteReaderAsync(ct);
-        while(await rd.ReadAsync(ct)) list.Add(new{id=rd.GetGuid(0),medicationName=rd.GetString(1),dose=rd.IsDBNull(2)?null:rd.GetString(2),frequency=rd.IsDBNull(3)?null:rd.GetString(3),route=rd.IsDBNull(4)?null:rd.GetString(4),duration=rd.IsDBNull(5)?null:rd.GetString(5),quantity=rd.GetInt32(6),instructions=rd.IsDBNull(7)?null:rd.GetString(7)});
+        while(await rd.ReadAsync(ct)) list.Add(new{id=rd.GetGuid(0),medicationName=rd.GetString(1),dose=rd.IsDBNull(2)?null:rd.GetString(2),frequency=rd.IsDBNull(3)?null:rd.GetString(3),route=rd.IsDBNull(4)?null:rd.GetString(4),durationDays=rd.IsDBNull(5)?null:(int?)rd.GetInt32(5),quantity=rd.IsDBNull(6)?null:(string?)rd.GetString(6),instructions=rd.IsDBNull(7)?null:rd.GetString(7)});
         return Ok(list);
     }
 }

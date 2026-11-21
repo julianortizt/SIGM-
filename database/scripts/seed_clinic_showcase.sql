@@ -111,9 +111,9 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[3], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50),
+    'APT-' || substr(gen_random_uuid()::text,1,12),
     (v_str_tm1||' 08:30')::timestamptz, (v_str_tm1||' 09:00')::timestamptz,
-    'COMPLETED', 'Control medico de enfermedad cronica. Dosificacion de medicamentos.',
+    'ATTENDED', 'Control medico de enfermedad cronica. Dosificacion de medicamentos.',
     'Paciente refiere control rutinario de diabetes tipo 2. Sin quejas new.',
     v_rec, now() - '2 hours'::interval, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
@@ -121,9 +121,9 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[4], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50),
+    'APT-' || substr(gen_random_uuid()::text,1,12),
     (v_str_tm2||' 10:00')::timestamptz, (v_str_tm2||' 10:30')::timestamptz,
-    'COMPLETED', 'Dolor abdominal recurrente y diarrea.',
+    'ATTENDED', 'Dolor abdominal recurrente y diarrea.',
     'Paciente con dolor abdominal que irradia a region epigastrica. Sin fiebre. Solicitar laboratorio basico.',
     v_rec, now() - '3 hours'::interval, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
@@ -131,7 +131,7 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[5], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50),
+    'APT-' || substr(gen_random_uuid()::text,1,12),
     (v_str_today||' 11:00')::timestamptz, (v_str_today||' 11:30')::timestamptz,
     'IN_PROGRESS', 'Control de peso y presion arterial. Preguntar sobre cansancio y cefalea.',
     'Control mensual de salud general. Paciente refiere cansancio y algo de dolor de cabeza.',
@@ -141,7 +141,7 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[6], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50),
+    'APT-' || substr(gen_random_uuid()::text,1,12),
     (v_str_today||' 13:00')::timestamptz, (v_str_today||' 13:30')::timestamptz,
     'WAITING', 'Antecedentes de hipertension y cardiopatia isquemica. Chequeo cardiovascular.',
     'Control cardiovascular peridiemal.',
@@ -151,8 +151,8 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[7], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50),
-    (v_tomorrow||' 09:00')::timestamptz, (v_tomorrow||' 09:30')::timestamptz,
+    'APT-' || substr(gen_random_uuid()::text,1,12),
+    (v_tomorrow||' 10:00')::timestamptz, (v_tomorrow||' 10:30')::timestamptz,
     'CONFIRMED', 'Amigdalitis recurrente. Preguntar sobre fiebre y farmacos.',
     'Historial de amigdalitis recurrente con necesidad de valoracion para amigtalectomia eventual.',
     v_rec, now(), now(), now()
@@ -161,7 +161,7 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[8], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50),
+    'APT-' || substr(gen_random_uuid()::text,1,12),
     (v_day_after||' 14:00')::timestamptz, (v_day_after||' 14:30')::timestamptz,
     'CONFIRMED', 'Revision de resultados de laboratorio. Control de glucosa y colesterol.',
     'Paciente adulto joven con factores de riesgo metabolicos. Lab solicitado pendiente.',
@@ -171,7 +171,7 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, cancelled_at, cancellation_reason, created_at, updated_at)
   SELECT v_tenant, v_pats[1], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'FFFFFFMMDDHH24MISS'),1,50),
+    'APT-' || substr(gen_random_uuid()::text,1,12),
     (v_str_tm4||' 15:00')::timestamptz, (v_str_tm4||' 15:30')::timestamptz,
     'CANCELLED',    'Cita de rutina mensual.',
     'Cancelada por el paciente por imposibilidad de asistencia.',
@@ -181,7 +181,7 @@ BEGIN
   INSERT INTO sigm.appointments (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_type_id, appointment_number, starts_at, ends_at, status, reason, notes, booked_by, confirmed_at, created_at, updated_at)
   SELECT v_tenant, v_pats[2], v_prov, v_fam, v_site, v_office, v_at_cons,
-    'APT-' || substr(to_char(now(),'YYYYMMDDHH24MISS'),1,50) || '-' || substr(v_pats[2]::text,1,20),
+    'APT-' || substr(gen_random_uuid()::text,1,12) || '-' || substr(v_pats[2]::text,1,20),
     (v_str_tm3||' 16:00')::timestamptz, (v_str_tm3||' 16:30')::timestamptz,
     'NO_SHOW', 'Cita de seguimiento post-operatorio leve.',
     'Paciente no presento. Se notifico por WhatsApp. Reagendar proximamente.',
@@ -193,23 +193,23 @@ BEGIN
     appointment_id, encounter_type, encounter_date, started_at, ended_at, chief_complaint, status, created_by, created_at, updated_at)
   SELECT v_tenant, v_pats[3], v_prov, v_fam, v_site, v_office,
     (SELECT id FROM sigm.appointments WHERE tenant_id=v_tenant AND patient_id=v_pats[3] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    'OUTPATIENT', v_str_tm1::date, (v_str_tm1||' 09:00')::timestamptz, (v_str_tm1||' 09:40')::timestamptz,
-    'Dolor de cabeza y controles de diabetes. Paciente estable.', 'ATTENDED', v_doc, now(), now()
+    'CONSULTATION', v_str_tm1::date, (v_str_tm1||' 09:00')::timestamptz, (v_str_tm1||' 09:40')::timestamptz,
+    'Dolor de cabeza y controles de diabetes. Paciente estable.', 'COMPLETED', v_doc, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.encounters (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_id, encounter_type, encounter_date, started_at, ended_at, chief_complaint, status, created_by, created_at, updated_at)
   SELECT v_tenant, v_pats[4], v_prov, v_gastro, v_site, v_office,
     (SELECT id FROM sigm.appointments WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    'OUTPATIENT', v_str_tm2::date, (v_str_tm2||' 10:30')::timestamptz, (v_str_tm2||' 11:15')::timestamptz,
-    'Dolor abdominal recurrente, diarrea y perdida de peso leve. Valorar laboratorio.', 'ATTENDED', v_doc, now(), now()
+    'CONSULTATION', v_str_tm2::date, (v_str_tm2||' 10:30')::timestamptz, (v_str_tm2||' 11:15')::timestamptz,
+    'Dolor abdominal recurrente, diarrea y perdida de peso leve. Valorar laboratorio.', 'COMPLETED', v_doc, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.encounters (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_id, encounter_type, encounter_date, started_at, ended_at, chief_complaint, status, created_by, created_at, updated_at)
   SELECT v_tenant, v_pats[5], v_prov, v_fam, v_site, v_office,
     (SELECT id FROM sigm.appointments WHERE tenant_id=v_tenant AND patient_id=v_pats[5] AND status='IN_PROGRESS' ORDER BY id DESC LIMIT 1),
-    'OUTPATIENT', v_str_today::date, (v_str_today||' 11:05')::timestamptz, NULL,
+    'CONSULTATION', v_str_today::date, (v_str_today||' 11:05')::timestamptz, NULL,
     'Control de salud general, cansancio y cefalea leve.', 'IN_PROGRESS', v_doc, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
@@ -217,104 +217,114 @@ BEGIN
     appointment_id, encounter_type, encounter_date, started_at, ended_at, chief_complaint, status, created_by, created_at, updated_at)
   SELECT v_tenant, v_pats[6], v_prov, v_cardi, v_site, v_office,
     (SELECT id FROM sigm.appointments WHERE tenant_id=v_tenant AND patient_id=v_pats[6] AND status='WAITING' ORDER BY id DESC LIMIT 1),
-    'OUTPATIENT', v_str_today::date, NULL, NULL,
-    'Control cardiovascular. Paciente llego y espera.', 'WAITING', v_doc, now(), now()
+    'CONSULTATION', v_str_today::date, NULL, NULL,
+    'Control cardiovascular. Paciente llego y espera.', 'IN_PROGRESS', v_doc, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.encounters (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_id, encounter_type, encounter_date, started_at, ended_at, chief_complaint, status, created_by, created_at, updated_at)
   SELECT v_tenant, v_pats[7], v_prov, v_fam, v_site, v_office,
     (SELECT id FROM sigm.appointments WHERE tenant_id=v_tenant AND patient_id=v_pats[7] AND status='CONFIRMED' ORDER BY id DESC LIMIT 1),
-    'OUTPATIENT', v_tomorrow::date, NULL, NULL,
-    'Amigdalitis recurrente. Valorar manejo medico y posible amigtalectomia.', 'SCHEDULED', v_rec, now(), now()
+    'CONSULTATION', v_tomorrow::date, NULL, NULL,
+    'Amigdalitis recurrente. Valorar manejo medico y posible amigtalectomia.', 'IN_PROGRESS', v_rec, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.encounters (tenant_id, patient_id, professional_id, specialty_id, site_id, medical_office_id,
     appointment_id, encounter_type, encounter_date, started_at, ended_at, chief_complaint, status, created_by, created_at, updated_at)
   SELECT v_tenant, v_pats[8], v_prov, v_endo, v_site, v_office,
     (SELECT id FROM sigm.appointments WHERE tenant_id=v_tenant AND patient_id=v_pats[8] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    'OUTPATIENT', v_str_tm2::date, (v_str_tm2||' 14:30')::timestamptz, (v_str_tm2||' 15:05')::timestamptz,
-    'Revision de laboratorio metabolico y control de glucosa.', 'ATTENDED', v_doc, now(), now()
+    'CONSULTATION', v_str_tm2::date, (v_str_tm2||' 14:30')::timestamptz, (v_str_tm2||' 15:05')::timestamptz,
+    'Revision de laboratorio metabolico y control de glucosa.', 'COMPLETED', v_doc, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   -- ================= NOTAS CLINICAS =================
   INSERT INTO sigm.clinical_notes (tenant_id, encounter_id, patient_id, author_user_id, note_type, status, current_version, signed_at, signed_by, created_at, updated_at)
   SELECT v_tenant,
-    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[3] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    v_pats[3], v_doc, 'EVOLUTION', 'SIGNED', 1, now(), v_doc, now(), now()
+    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[3] AND status='COMPLETED' ORDER BY id DESC LIMIT 1),
+    v_pats[3], v_doc, 'EVOLUTION', 'DRAFT', 1, NULL, NULL, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.clinical_note_versions (tenant_id, note_id, version_number, content, author_user_id, signed_at, signature_hash, created_at)
   SELECT v_tenant,
     (SELECT id FROM sigm.clinical_notes WHERE tenant_id=v_tenant AND patient_id=v_pats[3] AND note_type='EVOLUTION' ORDER BY id DESC LIMIT 1),
     1,
-    E'\nEVOLUTION NOTE\n' ||
-    E'Signa examen general: paciente alerta, orientado, sin vitreos.\n' ||
-    E'Evaluation: control de diabetes tipo 2 bajo tratamiento. PA estable 128/76. Glucometria capilar 138 mg/dL.\n' ||
-    E'Plan: mantener actualidad de tratamiento, renovar formulacion de metformina al proximo mes, solicitar hemograma y perfil lipidico proximamente. Paciente educado sobre dieta.',
+    to_jsonb(
+      E'\nEVOLUTION NOTE\n' ||
+      E'Signa examen general: paciente alerta, orientado, sin vitreos.\n' ||
+      E'Evaluation: control de diabetes tipo 2 bajo tratamiento. PA estable 128/76. Glucometria capilar 138 mg/dL.\n' ||
+      E'Plan: mantener actualidad de tratamiento, renovar formulacion de metformina al proximo mes, solicitar hemograma y perfil lipidico proximamente. Paciente educado sobre dieta.'
+    ),
     v_doc, now(), md5('signed-1'), now()
   ON CONFLICT (tenant_id, note_id, version_number) DO NOTHING;
 
   INSERT INTO sigm.clinical_notes (tenant_id, encounter_id, patient_id, author_user_id, note_type, status, current_version, signed_at, signed_by, created_at, updated_at)
   SELECT v_tenant,
-    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    v_pats[4], v_doc, 'CONSULTATION', 'SIGNED', 1, now(), v_doc, now(), now()
+    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND status='COMPLETED' ORDER BY id DESC LIMIT 1),
+    v_pats[4], v_doc, 'CONSULTATION', 'DRAFT', 1, NULL, NULL, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.clinical_note_versions (tenant_id, note_id, version_number, content, author_user_id, signed_at, signature_hash, created_at)
   SELECT v_tenant,
     (SELECT id FROM sigm.clinical_notes WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND note_type='CONSULTATION' ORDER BY id DESC LIMIT 1),
     1,
-    E'\nCONSULTATION NOTE\n' ||
-    E'History: dolor abdominal recurrente epigastrico, asociado a comidas. Diarrea intermitente (2-3 episodios/dia). Perdida de peso no intencional leve (2 kg en mes). Sin fiebre. Sin emesis.\n' ||
-    E'Exploration: abdomen distendido levemente, dolor a palpacacion en epigastrio, sin rebote, sin defensa. Resto dean normal.\n' ||
-    E'Assessment: sospecha de gastropathy relacionada con NSAID e infeccion gastrointestinal leve.\n' ||
-    E'Plan: dieta blanda y probiotico, suspension de NSAID si aplica. Reagenda con resultados de laboratorio.',
+    to_jsonb(
+      E'\nCONSULTATION NOTE\n' ||
+      E'History: dolor abdominal recurrente epigastrico, asociado a comidas. Diarrea intermitente (2-3 episodios/dia). Perdida de peso no intencional leve (2 kg en mes). Sin fiebre. Sin emesis.\n' ||
+      E'Exploration: abdomen distendido levemente, dolor a palpacacion en epigastrio, sin rebote, sin defensa. Resto dean normal.\n' ||
+      E'Assessment: sospecha de gastropathy relacionada con NSAID e infeccion gastrointestinal leve.\n' ||
+      E'Plan: dieta blanda y probiotico, suspension de NSAID si aplica. Reagenda con resultados de laboratorio.'
+    ),
     v_doc, now(), md5('signed-1'), now()
   ON CONFLICT (tenant_id, note_id, version_number) DO NOTHING;
 
   INSERT INTO sigm.clinical_notes (tenant_id, encounter_id, patient_id, author_user_id, note_type, status, current_version, signed_at, signed_by, created_at, updated_at)
   SELECT v_tenant,
     (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[5] AND status='IN_PROGRESS' ORDER BY id DESC LIMIT 1),
-    v_pats[5], v_doc, 'CONSULTATION', 'DRAFT', 0, NULL, NULL, now(), now()
+    v_pats[5], v_doc, 'CONSULTATION', 'DRAFT', 1, NULL, NULL, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.clinical_note_versions (tenant_id, note_id, version_number, content, author_user_id, signed_at, signature_hash, created_at)
   SELECT v_tenant,
     (SELECT id FROM sigm.clinical_notes WHERE tenant_id=v_tenant AND patient_id=v_pats[5] AND note_type='CONSULTATION' ORDER BY id DESC LIMIT 1),
-    0,
-    E'\nBORRADOR - aun no firmado.\n' ||
-    E'Recogimiento inicial del paciente. Cansancio, cefalea leve. Se solicitan signos vitales y laboratorio basal.',
+    1,
+    to_jsonb(
+      E'\nBORRADOR - aun no firmado.\n' ||
+      E'Recogimiento inicial del paciente. Cansancio, cefalea leve. Se solicitan signos vitales y laboratorio basal.'
+    ),
     v_doc, NULL, NULL, now()
   ON CONFLICT (tenant_id, note_id, version_number) DO NOTHING;
 
   INSERT INTO sigm.clinical_notes (tenant_id, encounter_id, patient_id, author_user_id, note_type, status, current_version, signed_at, signed_by, created_at, updated_at)
   SELECT v_tenant,
-    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    v_pats[4], v_rec, 'NURSING', 'SIGNED', 1, now(), v_rec, now(), now()
+    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND status='COMPLETED' ORDER BY id DESC LIMIT 1),
+    v_pats[4], v_rec, 'NURSING', 'DRAFT', 1, NULL, NULL, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.clinical_note_versions (tenant_id, note_id, version_number, content, author_user_id, signed_at, signature_hash, created_at)
   SELECT v_tenant,
     (SELECT id FROM sigm.clinical_notes WHERE tenant_id=v_tenant AND patient_id=v_pats[4] AND note_type='NURSING' ORDER BY id DESC LIMIT 1),
     1,
-    E'\nNURSING NOTE\n' || E'Paciente admitido, signos estables al ingreso. Control de signos vitales cada hora.\n' ||
-    E'Evolucion: sin cambios. Recomendar hidratacion adecuada y dieta suave.',
+    to_jsonb(
+      E'\nNURSING NOTE\n' || E'Paciente admitido, signos estables al ingreso. Control de signos vitales cada hora.\n' ||
+      E'Evolucion: sin cambios. Recomendar hidratacion adecuada y dieta suave.'
+    ),
     v_rec, now(), md5('signed-1'), now()
   ON CONFLICT (tenant_id, note_id, version_number) DO NOTHING;
 
   INSERT INTO sigm.clinical_notes (tenant_id, encounter_id, patient_id, author_user_id, note_type, status, current_version, signed_at, signed_by, created_at, updated_at)
   SELECT v_tenant,
-    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[8] AND status='ATTENDED' ORDER BY id DESC LIMIT 1),
-    v_pats[8], v_doc, 'DISCHARGE', 'SIGNED', 1, now(), v_doc, now(), now()
+    (SELECT id FROM sigm.encounters WHERE tenant_id=v_tenant AND patient_id=v_pats[8] AND status='COMPLETED' ORDER BY id DESC LIMIT 1),
+    v_pats[8], v_doc, 'DISCHARGE', 'DRAFT', 1, NULL, NULL, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
 
   INSERT INTO sigm.clinical_note_versions (tenant_id, note_id, version_number, content, author_user_id, signed_at, signature_hash, created_at)
   SELECT v_tenant,
     (SELECT id FROM sigm.clinical_notes WHERE tenant_id=v_tenant AND patient_id=v_pats[8] AND note_type='DISCHARGE' ORDER BY id DESC LIMIT 1),
     1,
-    E'\nDISCHARGE NOTE\n' ||
-    E'At conclusion of visit: patient stable, no acute events. Lab results reviewed. Continued outpatient follow-up recommended.',
+    to_jsonb(
+      E'\nDISCHARGE NOTE\n' ||
+      E'At conclusion of visit: patient stable, no acute events. Lab results reviewed. Continued outpatient follow-up recommended.'
+    ),
     v_doc, now(), md5('signed-1'), now()
   ON CONFLICT (tenant_id, note_id, version_number) DO NOTHING;
 
@@ -341,6 +351,17 @@ BEGIN
   SELECT v_tenant, v_pats[7], 'Acaros del polvo', 'ENVIRONMENTAL', 'Rinitis alergica y estornudos', 'MEDIUM', NULL, 'ACTIVE', v_rec, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
   INSERT INTO sigm.allergies (tenant_id, patient_id, allergen, allergen_type, reaction, severity, onset_date, status, recorded_by, created_at, updated_at)
-  SELECT v_tenant, v_pats[8], 'Mariscos', 'FOOD', 'Sarpullido y picazu leve', 'LOW', NULL, 'INACTIVE', v_doc, now(), now()
+  SELECT v_tenant, v_pats[8], 'Mariscos', 'FOOD', 'Sarpullido y picazu leve', 'LOW', NULL, 'RESOLVED', v_doc, now(), now()
   ON CONFLICT (tenant_id, id) DO NOTHING;
+
+  -- ================= FIRMA DE NOTAS =================
+  -- El trigger exige una versión con signed_at antes de permitir el estado SIGNED.
+  UPDATE sigm.clinical_notes n
+     SET status='SIGNED',
+         current_version=1,
+         signed_at=now(),
+         signed_by=CASE WHEN n.note_type='NURSING' THEN v_rec ELSE v_doc END
+   WHERE n.tenant_id=v_tenant
+     AND n.status='DRAFT'
+     AND n.patient_id IN (v_pats[3], v_pats[4], v_pats[8]);
 END $$;

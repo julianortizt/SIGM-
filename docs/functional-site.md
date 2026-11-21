@@ -1,5 +1,43 @@
 # SIGM Cloud — Sitio funcional (desarrollo/demo)
 
+## Sitio desplegado (producción)
+
+Sitio público: **https://hcmmedical.vercel.app** (un proyecto Vercel + Neon; sin dominio propio).
+
+| Portal | URL |
+|---|---|
+| Landing | https://hcmmedical.vercel.app/ |
+| SIGM Clínicas | https://hcmmedical.vercel.app/app/ |
+| SIGM Consultorios | https://hcmmedical.vercel.app/consultorios/ |
+| Portal Pacientes | https://hcmmedical.vercel.app/pacientes/ |
+| Consola Admin | https://hcmmedical.vercel.app/admin/ |
+
+### Accesos demo (organización `CLINIC-DEMO`)
+
+| Rol | Correo | Contraseña | Permisos |
+|---|---|---|---|
+| Administrador | `admin@demo.sigm.local` | `Demo12345!` | 60 |
+| Médico | `doctor@demo.sigm.local` | `Doctor123!` | 22 |
+| Recepción | `recepcion@demo.sigm.local` | `Recep123!` | 11 |
+| **Paciente** | `ana.perez@ejemplo.test` | `Demo12345!` | 2 (portal propio) |
+| Superadmin plataforma (sin tenant) | `soporte@sigm.cloud` | `Soporte2026!` | 6 |
+
+En el campo **Organización** del login se escribe el código corto `CLINIC-DEMO`. El superadmin inicia sesión sin organización.
+
+### Orden de carga de los datos demo en Neon
+
+```powershell
+$url = (Get-Content .env.vercel | Where-Object { $_ -match '^DATABASE_URL_UNPOOLED=' } | Select-Object -First 1) -replace '^DATABASE_URL_UNPOOLED="|"$',''
+$psql = 'C:\Program Files\PostgreSQL\18\bin\psql.exe'
+& $psql $url -X -v ON_ERROR_STOP=1 -f database/run_all.sql
+& $psql $url -X -v ON_ERROR_STOP=1 -f database/scripts/seed_demo_full.sql
+& $psql $url -X -v ON_ERROR_STOP=1 -f database/scripts/seed_demo_clinical.sql
+& $psql $url -X -v ON_ERROR_STOP=1 -f database/scripts/seed_clinic_showcase.sql
+& $psql $url -X -v ON_ERROR_STOP=1 -f database/scripts/seed_demo_clinical_details.sql
+```
+
+Los cuatro scripts demo son idempotentes y pueden repetirse. Resultado final: 8 pacientes, 8 atenciones, 6 notas (4 firmadas), 17 signos vitales, 9 antecedentes personales, 8 antecedentes familiares, 8 diagnósticos, 17 alergias, 8 medicamentos, 8 afiliaciones EPS, 12 órdenes de laboratorio con resultados, 8 fórmulas, 8 facturas y 9 citas.
+
 ## Requisitos
 - PostgreSQL 18 en `127.0.0.1:5432` (servicio `postgresql-x64-18`, usuario `postgres`)
 - .NET SDK 10.0 (`C:\Users\Julian\dotnet` en este equipo)
@@ -21,6 +59,7 @@ $pg='C:\Program Files\PostgreSQL\18\bin'; $env:PGPASSWORD='postgres'
 | Administrador (`CLINIC_ADMIN`, 60 permisos) | `admin@demo.sigm.local` | `Demo12345!` | `CLINIC-DEMO` |
 | Médico (`PHYSICIAN`, 22 permisos) | `doctor@demo.sigm.local` | `Doctor123!` | `CLINIC-DEMO` |
 | Recepción (`RECEPTIONIST`, 11 permisos) | `recepcion@demo.sigm.local` | `Recep123!` | `CLINIC-DEMO` |
+| Paciente (`PATIENT`, 2 permisos) | `ana.perez@ejemplo.test` | `Demo12345!` | `CLINIC-DEMO` |
 
 > En el campo **Organización** del login se escribe el código corto `CLINIC-DEMO` (no distingue mayúsculas). El UUID interno `11111111-1111-4111-8111-111111111111` es solo la clave primaria en BD; el usuario nunca lo necesita. `Login` lo resuelve con `ResolveTenantAsync` y el front muestra el código en la insignia del tenant.
 
