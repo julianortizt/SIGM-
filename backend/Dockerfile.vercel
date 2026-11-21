@@ -2,9 +2,8 @@
 # Contexto de build: la carpeta backend/ (contiene SIGM.slnx y src/).
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY SIGM.slnx ./
 COPY src ./src
-RUN dotnet restore SIGM.slnx
+RUN dotnet restore src/SIGM.Api/SIGM.Api.csproj
 RUN dotnet publish src/SIGM.Api/SIGM.Api.csproj -c Release -o /app/publish --no-restore /p:UseAppHost=false
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
