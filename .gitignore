@@ -49,3 +49,6 @@ backend/backups/
 *.dump.gz
 database/import/data/*.csv
 database/import/data/*.sql.tmp
+
+.vercel
+.env*.local

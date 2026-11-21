@@ -45,10 +45,12 @@ Hay unas **190 rutas en 36 controladores**. Si se elimina .NET no se simplifica 
 
 ```bash
 curl https://TU_PROYECTO.vercel.app/health
-curl https://TU_PROYECTO.vercel.app/api/health
 curl https://TU_PROYECTO.vercel.app/health/ready   # {"status":"ready","database":true}
+curl https://TU_PROYECTO.vercel.app/api/v1/public/welcome
 curl -I https://app.TU_DOMINIO.com
 ```
+
+Nota: `/api/health` **no existe**; el health de la API está en `/health` y `/health/ready`. Todo lo demás de la API sí va bajo `/api/v1/*`.
 
 Después: login en el navegador y comprobar que se escribe auditoría con `sigm_app` sin `BYPASSRLS`.
 
@@ -63,7 +65,18 @@ Después: login en el navegador y comprobar que se escribe auditoría con `sigm_
 | `/health/ready` da 503 | Revisar `ConnectionStrings__Platform` |
 | Todo muestra la landing | Dominios no configurados o placeholder sin reemplazar |
 
-## 5. Límites que quedan (no son del deploy)
+## 5. Estado real de este despliegue
+
+- Proyecto Vercel: `hcmmedical` (equipo `julianortizt-7539s-projects`), repo `https://github.com/julianortizt/SIGM-`, rama `main`.
+- URL pública: **https://hcmmedical.vercel.app**.
+- Deploy verificado: `/health` y `/health/ready` → 200, `/api/v1/public/welcome` → 200, landing → 200, login con credenciales inválidas → 401.
+- Neon creado desde Marketplace (`sigm`), PostgreSQL 18.7, 96 policies RLS, 105 tablas, extensiones `pgcrypto`, `btree_gist`, `pg_trgm`, `citext`, `unaccent`.
+- Roles: `sigm_app` (login, sin `BYPASSRLS`) y `sigm_platform` (login, con `BYPASSRLS`).
+- Migraciones 001–022 aplicadas. Detalle operativo: `run_all.sql` se ejecutó como `neondb_owner`; la migración 020 requiere `current_user = sigm_platform` (se hizo con `SET ROLE` tras `GRANT sigm_platform TO neondb_owner` y `GRANT CREATE ON SCHEMA sigm TO sigm_platform`); las migraciones 021–022 requieren ser propietario de las tablas y se ejecutaron como `neondb_owner`.
+- Variables de entorno de **Production** cargadas. Las de **Preview** quedan pendientes: la CLI no permite aplicar "todas las ramas de preview" y `main` es la rama de producción; se pueden añadir desde el dashboard (Project Settings → Environment Variables → Preview → All Preview branches).
+- Sin dominio propio: funcionan la landing, `/health*` y `/api/v1/*`; los otros 4 portales requieren sus subdominios.
+
+## 6. Límites que quedan (no son del deploy)
 
 - **Archivos:** `LocalFileStorageService` escribe en disco efímero → migrar a Vercel Blob/R2 antes de subir documentos reales.
 - **Workers:** recordatorios y backups programados no son fiables en contenedores que escalan a cero → usar Vercel Cron y PITR de Neon.
