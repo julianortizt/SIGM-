@@ -141,6 +141,9 @@ export default function App() {
   const [rx, setRx] = useState<any[]>([]); const [insurers, setInsurers] = useState<any[]>([]); const [contracts, setContracts] = useState<any[]>([]); const [auths, setAuths] = useState<any[]>([]); const [payments, setPayments] = useState<any[]>([]);
   const [interopEvents, setInteropEvents] = useState<any[]>([]); const [transmissions, setTransmissions] = useState<any[]>([]); const [rda, setRda] = useState<any[]>([]); const [audit, setAudit] = useState<any[]>([]); const [access, setAccess] = useState<any[]>([]);
   const session = getSession();
+  const can = (permission: string) => !!session?.permissions?.includes(permission);
+  const canReadSpecialties = can('tenant.specialties.read') || can('tenant.specialties.manage');
+  const canManageSpecialties = can('tenant.specialties.manage');
   const [patientQ, setPatientQ] = useState('');
   const [patTotal, setPatTotal] = useState(0); const [patPage, setPatPage] = useState(1);
   const [patientEdit, setPatientEdit] = useState<any>(null);
@@ -158,6 +161,10 @@ export default function App() {
     }
     return [];
   });
+  const visibleNav = nav
+    .map(g => ({ ...g, items: g.items.filter(i => (i.id !== 'specialties' || canReadSpecialties) && (i.id !== 'clinical' || can('clinical.read'))) }))
+    .filter(g => g.items.length > 0);
+
   useEffect(() => {
     async function sync() {
       try {
@@ -177,7 +184,10 @@ export default function App() {
 
   async function loadData() {
     const safe = async <T,>(p: Promise<T>, fb: T) => { try { return await p; } catch { return fb; } };
-    const [all, mine] = await Promise.all([safe(api.specialties(), []), safe(api.tenantSpecialties(), [])]);
+    const [all, mine] = await Promise.all([
+      safe(api.specialties(), []),
+      canReadSpecialties ? safe(api.tenantSpecialties(), []) : Promise.resolve([] as any[]),
+    ]);
     setSpecialties(all); setSelected((mine || []).map((x: any) => String(x.id)));
     setUsers(await safe(api.users(), [])); setSites(await safe(api.sites(), [])); setOffices(await safe(api.offices(), []));
     setPros(await safe(api.professionals(), [])); setSchedules(await safe(api.schedules(), [])); setRules(await safe(api.rules(), [])); setExceptions(await safe(api.exceptions(), [])); setApptTypes(await safe(api.appointmentTypes(), []));
@@ -383,7 +393,7 @@ export default function App() {
         <div><div className="brand-name">{brand}</div><div className="brand-sub">{product}</div></div>
       </div>
       <nav className="nav">
-        {nav.map(g => {
+        {visibleNav.map(g => {
           // Determinar si este grupo de navegación tiene un módulo asociado que pudiera estar oculto.
           // Mapeo simple: los ids de tab que contienen el nombre del módulo se ocultan si ese módulo está en hiddenModules.
           const moduleMap: Record<Tab, string> = {
@@ -593,22 +603,31 @@ export default function App() {
           </section>
         </>}
 
-        {tab === 'specialties' && <section className="panel">
+        {tab === 'specialties' && canReadSpecialties && <section className="panel">
           <div className="panel-h"><div><div className="panel-t"><Ico name="grid" /> Especialidades habilitadas</div><div className="panel-d">Seleccione las especialidades que ofrece la organización y guarde los cambios.</div></div>
-            <button className="btn" onClick={() => run(() => api.saveTenantSpecialties(selected))} disabled={busy}><Ico name="check" size={14} /> Guardar cambios</button></div>
+            <button className="btn" onClick={() => run(() => api.saveTenantSpecialties(selected))} disabled={!canManageSpecialties || busy} title={!canManageSpecialties ? 'Su rol no permite administrar especialidades' : undefined}><Ico name="check" size={14} /> Guardar cambios</button></div>
           <div className="panel-b">
-            <div className="chips" style={{ marginTop: 0 }}>{specialties.map(s => <label key={s.id} className={'chip' + (selected.includes(String(s.id)) ? ' on' : '')}><input type="checkbox" checked={selected.includes(String(s.id))} onChange={e => setSelected(p => e.target.checked ? [...p, String(s.id)] : p.filter(x => x !== String(s.id)))} /> {s.name}</label>)}</div>
+            {!canManageSpecialties && <div className="alert">Su rol solo puede consultar las especialidades. Para cambiarlas, ingrese con un administrador de la organización.</div>}
+            <div className="chips" style={{ marginTop: 0 }}>{specialties.map(s => <label key={s.id} className={'chip' + (selected.includes(String(s.id)) ? ' on' : '')}><input type="checkbox" disabled={!canManageSpecialties} checked={selected.includes(String(s.id))} onChange={e => setSelected(p => e.target.checked ? [...p, String(s.id)] : p.filter(x => x !== String(s.id)))} /> {s.name}</label>)}</div>
           </div>
         </section>}
 
         {tab === 'users' && <section className="panel">
           <div className="panel-h"><div><div className="panel-t"><Ico name="users" /> Usuarios</div><div className="panel-d">{users.length} usuarios en la organización</div></div></div>
           <div className="panel-b" style={{ paddingBottom: 10 }}>
-            <form className="toolbar" onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.createUser({ email: fd.get('email'), fullName: fd.get('fullName'), phone: fd.get('phone') || null, password: fd.get('password'), roleCodes: [fd.get('role') || 'DOCTOR'] }), f); }}>
+            <form className="toolbar" onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.createUser({ email: fd.get('email'), fullName: fd.get('fullName'), phone: fd.get('phone') || null, password: fd.get('password'), roleCodes: [fd.get('role') || 'PHYSICIAN'] }), f); }}>
               <label className="field"><span>Nombre</span><input name="fullName" placeholder="Nombre completo" required /></label>
               <label className="field"><span>Correo</span><input name="email" type="email" placeholder="correo@organizacion.com" required /></label>
               <label className="field"><span>Contraseña</span><input name="password" type="password" placeholder="Contraseña" required /></label>
-              <label className="field"><span>Rol</span><select name="role"><option>DOCTOR</option><option>RECEPTIONIST</option><option>NURSE</option><option>BILLING</option><option>TENANT_ADMIN</option><option>LAB_STAFF</option></select></label>
+              <label className="field"><span>Rol</span><select name="role">
+                <option value="PHYSICIAN">Médico</option>
+                <option value="NURSE">Enfermería</option>
+                <option value="RECEPTIONIST">Recepción</option>
+                <option value="BILLER">Facturación</option>
+                <option value="MEDICAL_DIRECTOR">Director médico</option>
+                <option value="LAB_STAFF">Laboratorio</option>
+                <option value="CLINIC_ADMIN">Administrador</option>
+              </select></label>
               <button className="btn" disabled={busy}><Ico name="users" size={14} /> Agregar</button>
             </form>
           </div>

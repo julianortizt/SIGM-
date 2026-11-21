@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import './App.css';
 import { API, api, clearSession, getSession, setSession } from './api';
+import { openClinicalRecordPdf, printClinicalRecord } from './clinicalRecord';
 
 type View = 'login' | 'register' | 'dashboard';
 type Tab = 'home'|'specialties'|'users'|'sites'|'offices'|'professionals'|'schedules'|'patients'|'appointments'|'waiting'|'reminders'|'encounters'|'clinical'|'lab'|'prescriptions'|'billing'|'eps'|'documents'|'interop'|'audit';
@@ -129,11 +130,20 @@ export default function App() {
   const [pros, setPros] = useState<any[]>([]); const [schedules, setSchedules] = useState<any[]>([]); const [rules, setRules] = useState<any[]>([]); const [exceptions, setExceptions] = useState<any[]>([]); const [apptTypes, setApptTypes] = useState<any[]>([]);
   const [patients, setPatients] = useState<any[]>([]); const [appts, setAppts] = useState<any[]>([]); const [encounters, setEncounters] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null); const [summaryPatient, setSummaryPatient] = useState('');
+  const [record, setRecord] = useState<any>(null);
+  const [dxQuery, setDxQuery] = useState(''); const [dxOptions, setDxOptions] = useState<any[]>([]); const [dxId, setDxId] = useState('');
   const [services, setServices] = useState<any[]>([]); const [invoices, setInvoices] = useState<any[]>([]); const [ar, setAr] = useState<any[]>([]); const [docs, setDocs] = useState<any[]>([]); const [slots, setSlots] = useState<any>(null);
   const [waiting, setWaiting] = useState<any[]>([]); const [reminders, setReminders] = useState<any[]>([]); const [labOrders, setLabOrders] = useState<any[]>([]); const [labTests, setLabTests] = useState<any[]>([]);
   const [rx, setRx] = useState<any[]>([]); const [insurers, setInsurers] = useState<any[]>([]); const [contracts, setContracts] = useState<any[]>([]); const [auths, setAuths] = useState<any[]>([]); const [payments, setPayments] = useState<any[]>([]);
   const [interopEvents, setInteropEvents] = useState<any[]>([]); const [transmissions, setTransmissions] = useState<any[]>([]); const [rda, setRda] = useState<any[]>([]); const [audit, setAudit] = useState<any[]>([]); const [access, setAccess] = useState<any[]>([]);
   const session = getSession();
+  const can = (permission: string) => !!session?.permissions?.includes(permission);
+  const canReadSpecialties = can('tenant.specialties.read') || can('tenant.specialties.manage');
+  const canManageSpecialties = can('tenant.specialties.manage');
+  const visibleNav = nav
+    .map(g => ({ ...g, items: g.items.filter(i => (i.id !== 'specialties' || canReadSpecialties) && (i.id !== 'clinical' || can('clinical.read'))) }))
+    .filter(g => g.items.length > 0);
+  const clinicalEncounters = encounters.filter(e => e.patientId === summaryPatient);
   const [patientQ, setPatientQ] = useState('');
   const [showSuperadmin, setShowSuperadmin] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -163,7 +173,10 @@ export default function App() {
 
   async function loadData() {
     const safe = async <T,>(p: Promise<T>, fb: T) => { try { return await p; } catch { return fb; } };
-    const [all, mine] = await Promise.all([safe(api.specialties(), []), safe(api.tenantSpecialties(), [])]);
+    const [all, mine] = await Promise.all([
+      safe(api.specialties(), []),
+      canReadSpecialties ? safe(api.tenantSpecialties(), []) : Promise.resolve([] as any[]),
+    ]);
     setSpecialties(all); setSelected((mine || []).map((x: any) => String(x.id)));
     setUsers(await safe(api.users(), [])); setSites(await safe(api.sites(), [])); setOffices(await safe(api.offices(), []));
     setPros(await safe(api.professionals(), [])); setSchedules(await safe(api.schedules(), [])); setRules(await safe(api.rules(), [])); setExceptions(await safe(api.exceptions(), [])); setApptTypes(await safe(api.appointmentTypes(), []));
@@ -178,6 +191,32 @@ export default function App() {
   async function run(fn: () => Promise<any>, reset?: HTMLFormElement) {
     setBusy(true); setError('');
     try { await fn(); if (reset) reset.reset(); await loadData(); } catch (e: any) { setError(e.message || String(e)); } finally { setBusy(false); }
+  }
+
+  async function refreshClinical(patientId: string) {
+    if (!patientId) return;
+    const [s, r] = await Promise.all([api.clinicalSummary(patientId), api.clinicalRecord(patientId)]);
+    setSummary(s); setRecord(r);
+  }
+
+  async function runClinical(fn: () => Promise<any>, reset?: HTMLFormElement) {
+    await run(async () => { await fn(); await refreshClinical(summaryPatient); }, reset);
+  }
+
+  async function openRecordPdf(patientId: string) {
+    setBusy(true); setError('');
+    try { await openClinicalRecordPdf(patientId); } catch (e: any) { setError(e.message || String(e)); } finally { setBusy(false); }
+  }
+
+  async function printRecord(patientId: string) {
+    setBusy(true); setError('');
+    try { await printClinicalRecord(patientId); } catch (e: any) { setError(e.message || String(e)); } finally { setBusy(false); }
+  }
+
+  async function searchDiagnoses(q: string) {
+    setDxQuery(q);
+    if (q.trim().length < 2) { setDxOptions([]); return; }
+    try { setDxOptions(await api.searchDx(q)); } catch { setDxOptions([]); }
   }
 
   async function onLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -288,7 +327,7 @@ export default function App() {
         <div><div className="brand-name">{brand}</div><div className="brand-sub">{product}</div></div>
       </div>
       <nav className="nav">
-        {nav.map(g => {
+        {visibleNav.map(g => {
           // Determinar si este grupo de navegación tiene un módulo asociado que pudiera estar oculto.
           // Mapeo simple: los ids de tab que contienen el nombre del módulo se ocultan si ese módulo está en hiddenModules.
           const moduleMap: Record<Tab, string> = {
@@ -462,22 +501,32 @@ export default function App() {
           </section>
         </>}
 
-        {tab === 'specialties' && <section className="panel">
+        {tab === 'specialties' && canReadSpecialties && <section className="panel">
           <div className="panel-h"><div><div className="panel-t"><Ico name="grid" /> Especialidades habilitadas</div><div className="panel-d">Seleccione las especialidades que ofrece la organización y guarde los cambios.</div></div>
-            <button className="btn" onClick={() => run(() => api.saveTenantSpecialties(selected))} disabled={busy}><Ico name="check" size={14} /> Guardar cambios</button></div>
+            <button className="btn" onClick={() => run(() => api.saveTenantSpecialties(selected))} disabled={!canManageSpecialties || busy} title={!canManageSpecialties ? 'Su rol no permite administrar especialidades' : undefined}><Ico name="check" size={14} /> Guardar cambios</button></div>
           <div className="panel-b">
-            <div className="chips" style={{ marginTop: 0 }}>{specialties.map(s => <label key={s.id} className={'chip' + (selected.includes(String(s.id)) ? ' on' : '')}><input type="checkbox" checked={selected.includes(String(s.id))} onChange={e => setSelected(p => e.target.checked ? [...p, String(s.id)] : p.filter(x => x !== String(s.id)))} /> {s.name}</label>)}</div>
+            {!canManageSpecialties && <div className="alert">Su rol solo puede consultar las especialidades. Para cambiarlas, ingrese con un administrador de la organización.</div>}
+            <div className="chips" style={{ marginTop: 0 }}>{specialties.map(s => <label key={s.id} className={'chip' + (selected.includes(String(s.id)) ? ' on' : '')}><input type="checkbox" disabled={!canManageSpecialties} checked={selected.includes(String(s.id))} onChange={e => setSelected(p => e.target.checked ? [...p, String(s.id)] : p.filter(x => x !== String(s.id)))} /> {s.name}</label>)}</div>
           </div>
         </section>}
 
         {tab === 'users' && <section className="panel">
           <div className="panel-h"><div><div className="panel-t"><Ico name="users" /> Usuarios</div><div className="panel-d">{users.length} usuarios en la organización</div></div></div>
           <div className="panel-b" style={{ paddingBottom: 10 }}>
-            <form className="toolbar" onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.createUser({ email: fd.get('email'), fullName: fd.get('fullName'), phone: fd.get('phone') || null, password: fd.get('password'), roleCodes: [fd.get('role') || 'DOCTOR'] }), f); }}>
+            <form className="toolbar" onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.createUser({ email: fd.get('email'), fullName: fd.get('fullName'), phone: fd.get('phone') || null, password: fd.get('password'), roleCodes: [fd.get('role') || 'PHYSICIAN'] }), f); }}>
               <label className="field"><span>Nombre</span><input name="fullName" placeholder="Nombre completo" required /></label>
               <label className="field"><span>Correo</span><input name="email" type="email" placeholder="correo@organizacion.com" required /></label>
               <label className="field"><span>Contraseña</span><input name="password" type="password" placeholder="Contraseña" required /></label>
-              <label className="field"><span>Rol</span><select name="role"><option>DOCTOR</option><option>RECEPTIONIST</option><option>NURSE</option><option>BILLING</option><option>TENANT_ADMIN</option><option>LAB_STAFF</option></select></label>
+              <label className="field"><span>Rol</span><select name="role">
+                <option value="PHYSICIAN">Médico</option>
+                <option value="NURSE">Enfermería</option>
+                <option value="RECEPTIONIST">Recepción</option>
+                <option value="BILLER">Facturación</option>
+                <option value="MEDICAL_DIRECTOR">Director médico</option>
+                <option value="LAB_STAFF">Laboratorio</option>
+                <option value="CLINIC_ADMIN">Administrador</option>
+                <option value="PRACTICE_OWNER">Propietario consultorio</option>
+              </select></label>
               <button className="btn" disabled={busy}><Ico name="users" size={14} /> Agregar</button>
             </form>
           </div>
@@ -727,13 +776,51 @@ export default function App() {
           </div>
         </section>}
 
-        {tab === 'clinical' && <section className="panel">
-          <div className="panel-h"><div><div className="panel-t"><Ico name="clipboard" /> Resumen clínico y registros</div><div className="panel-d">Alergias, antecedentes, signos vitales y resumen integrado del paciente</div></div></div>
+        {tab === 'clinical' && can('clinical.read') && <section className="panel">
+          <div className="panel-h"><div><div className="panel-t"><Ico name="clipboard" /> Historia clínica del paciente</div><div className="panel-d">Consulte la historia completa, registre notas, signos vitales, alergias, antecedentes y diagnósticos, y firme las notas.</div></div></div>
           <div className="panel-b" style={{ paddingBottom: 12 }}>
-            <form className="toolbar" onSubmit={e => { e.preventDefault(); run(async () => setSummary(await api.clinicalSummary(summaryPatient))); }}>
+            <form className="toolbar" onSubmit={e => { e.preventDefault(); const pid = summaryPatient; run(async () => { await refreshClinical(pid); }); }}>
               <label className="field"><span>Paciente</span><select value={summaryPatient} onChange={e => setSummaryPatient(e.target.value)}><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
-              <button className="btn" disabled={!summaryPatient || busy}><Ico name="clipboard" size={14} /> Cargar resumen</button>
+              <button className="btn" disabled={!summaryPatient || busy}><Ico name="clipboard" size={14} /> Cargar historia</button>
+              <button className="btn ghost" type="button" disabled={!summaryPatient || busy} onClick={() => void openRecordPdf(summaryPatient)}><Ico name="folder" size={14} /> Historia clínica (PDF)</button>
+              <button className="btn ghost" type="button" disabled={!summaryPatient || busy} onClick={() => void printRecord(summaryPatient)}><Ico name="copy" size={14} /> Imprimir</button>
             </form>
+
+            {record && (() => {
+              const p = record.patient || {};
+              const alerts: any[] = record.allergies || [];
+              const encountersFull: any[] = record.encounters || [];
+              return <>
+                <div className="panel-sec-t">Paciente · {p.patientNumber || '—'}</div>
+                <div className="grid2">
+                  <div><b>{p.fullName || '—'}</b><div className="meta">{p.documentType || ''} {p.documentNumber || ''} · {p.birthDate ? `${d(p.birthDate)} · ` : ''}{p.sexAtBirth || '—'}</div></div>
+                  <div><div className="meta">Teléfono: {p.phone || p.mobilePhone || '—'}</div><div className="meta">Correo: {p.email || '—'}</div></div>
+                </div>
+                {alerts.length > 0 && <div className="alert"><b>Alertas clínicas:</b> {alerts.map((a: any) => `${a.allergen} (${a.severity})`).join(' · ')}</div>}
+                <div className="panel-sec-t">Atenciones y notas clínicas ({encountersFull.length})</div>
+                {encountersFull.length === 0 ? <div className="empty">Este paciente aún no tiene atenciones registradas. Cree una en la pestaña «Atenciones» o desde una cita.</div> :
+                  <div className="list-cards">
+                    {encountersFull.map((enc: any) => {
+                      const notes: any[] = enc.notes || [];
+                      return <div className="list-card" key={enc.id} style={{ alignItems: 'flex-start' }}>
+                        <div className="grow">
+                          <b>{dt(enc.encounterDate)} · {pretty(enc.encounterType || '')}</b>
+                          <div className="meta">{enc.professionalName || 'Profesional no asignado'}{enc.specialtyName ? ` · ${enc.specialtyName}` : ''} · <Badge v={enc.status} /></div>
+                          <div className="meta">Motivo: {enc.chiefComplaint || '—'}</div>
+                          {notes.length === 0 ? <div className="muted" style={{ marginTop: 6 }}>(sin notas registradas)</div> :
+                            notes.map((n: any) => <div key={n.id} className="note-card" style={{ marginTop: 8, padding: 8, borderLeft: '3px solid var(--line)', background: 'var(--surface-soft, transparent)' }}>
+                              <div className="meta"><b>{pretty(n.noteType || '')}</b> · <Badge v={n.status} /> · v{n.currentVersion || 1}{n.signedAt ? ` · firmada ${dt(n.signedAt)}` : ''}</div>
+                              <div style={{ whiteSpace: 'pre-wrap', marginTop: 4 }}>{n.content || '(sin contenido)'}</div>
+                              {(n.amendments || []).map((a: any) => <div className="meta" key={a.number}>Adenda {a.number}: {a.reason} — {a.content}</div>)}
+                              {n.status === 'DRAFT' && can('clinical.notes.sign') && <button className="chip-btn" disabled={busy} onClick={() => runClinical(() => api.signNote(n.id))}>Firmar nota</button>}
+                            </div>)}
+                        </div>
+                      </div>;
+                    })}
+                  </div>}
+              </>;
+            })()}
+
             {summary && (() => {
               const al: any[] = summary.allergies || [], dx: any[] = summary.diagnoses || [], vit: any[] = summary.vitals || [], hist: any[] = summary.history || [];
               const timeline = [
@@ -782,34 +869,70 @@ export default function App() {
               </>;
             })()}
           </div>
+
           <div className="panel-sec">
             <div className="grid2">
-              <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.addAllergy({ patientId: fd.get('patientId'), allergen: fd.get('allergen'), allergenType: fd.get('allergenType'), reaction: fd.get('reaction') || null, severity: fd.get('severity') || 'MEDIUM' }), f); }}>
+              <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); runClinical(() => api.addAllergy({ patientId: fd.get('patientId'), allergen: fd.get('allergen'), allergenType: fd.get('allergenType'), reaction: fd.get('reaction') || null, severity: fd.get('severity') || 'MEDIUM' }), f); }}>
                 <div className="panel-sec-t" style={{ paddingTop: 0 }}>Registrar alergia</div>
                 <div className="fields-grid">
-                  <label className="field" style={{ gridColumn: '1 / -1' }}><span>Paciente</span><select name="patientId" required><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
+                  <label className="field" style={{ gridColumn: '1 / -1' }}><span>Paciente</span><select name="patientId" required key={`al-patient-${summaryPatient}`} defaultValue={summaryPatient}><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
                   <label className="field"><span>Alérgeno</span><input name="allergen" placeholder="Alérgeno" required /></label>
                   <label className="field"><span>Tipo</span><select name="allergenType"><option>MEDICATION</option><option>FOOD</option><option>ENVIRONMENTAL</option><option>OTHER</option></select></label>
                   <label className="field"><span>Severidad</span><select name="severity"><option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option></select></label>
                   <label className="field"><span>Reacción</span><input name="reaction" placeholder="Reacción" /></label>
                 </div>
-                <button className="btn sm" disabled={busy} style={{ marginTop: 12 }}>Agregar alergia</button>
+                <button className="btn sm" disabled={busy || !summaryPatient || !can('clinical.allergies.manage')} style={{ marginTop: 12 }}>Agregar alergia</button>
               </form>
-              <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.addHistory({ patientId: fd.get('patientId'), encounterId: (fd.get('encounterId') as string) || null, historyType: fd.get('historyType'), description: fd.get('description'), onsetDate: fd.get('onsetDate') || null, status: 'ACTIVE' }), f); }}>
+              <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); runClinical(() => api.addHistory({ patientId: fd.get('patientId'), encounterId: (fd.get('encounterId') as string) || null, historyType: fd.get('historyType'), description: fd.get('description'), onsetDate: fd.get('onsetDate') || null, status: 'ACTIVE' }), f); }}>
                 <div className="panel-sec-t" style={{ paddingTop: 0 }}>Registrar antecedente</div>
                 <div className="fields-grid">
-                  <label className="field" style={{ gridColumn: '1 / -1' }}><span>Paciente</span><select name="patientId" required><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
+                  <label className="field" style={{ gridColumn: '1 / -1' }}><span>Paciente</span><select name="patientId" required key={`hist-patient-${summaryPatient}`} defaultValue={summaryPatient}><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
                   <label className="field"><span>Tipo</span><select name="historyType"><option>PERSONAL</option><option>SURGICAL</option><option>TOXICOLOGICAL</option><option>GYNECOLOGICAL</option><option>OTHER</option></select></label>
                   <label className="field"><span>Desde</span><input name="onsetDate" type="date" /></label>
                   <label className="field" style={{ gridColumn: '1 / -1' }}><span>Descripción</span><input name="description" placeholder="Descripción" required /></label>
                 </div>
-                <button className="btn sm" disabled={busy} style={{ marginTop: 12 }}>Agregar antecedente</button>
+                <button className="btn sm" disabled={busy || !summaryPatient || !can('clinical.history.manage')} style={{ marginTop: 12 }}>Agregar antecedente</button>
               </form>
             </div>
+
+            <div className="panel-sec-t">Escribir nota clínica</div>
+            <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); runClinical(() => api.addNote(String(fd.get('encounterId')), { noteType: fd.get('noteType'), content: { texto: fd.get('content') } }), f); }}>
+              <div className="fields-grid">
+                <label className="field"><span>Atención</span><select name="encounterId" required key={`note-enc-${summaryPatient}`}><option value="">Seleccionar…</option>{clinicalEncounters.map(e2 => <option key={e2.id} value={e2.id}>{dt(e2.encounterDate)} · {pretty(e2.encounterType)}</option>)}</select></label>
+                <label className="field"><span>Tipo de nota</span><select name="noteType">
+                  <option value="CONSULTATION">Consulta</option>
+                  <option value="EVOLUTION">Evolución</option>
+                  <option value="ADMISSION">Ingreso</option>
+                  <option value="DISCHARGE">Egreso</option>
+                  <option value="PROCEDURE">Procedimiento</option>
+                  <option value="EMERGENCY">Urgencias</option>
+                  <option value="TELEMEDICINE">Telemedicina</option>
+                  <option value="NURSING">Enfermería</option>
+                  <option value="INTERCONSULTATION">Interconsulta</option>
+                  <option value="OTHER">Otra</option>
+                </select></label>
+                <label className="field" style={{ gridColumn: '1 / -1' }}><span>Contenido</span><textarea name="content" rows={4} placeholder="Evolución, hallazgos, conducta…" required /></label>
+              </div>
+              <button className="btn" disabled={busy || !summaryPatient || !can('clinical.notes.create')}><Ico name="clipboard" size={14} /> Guardar nota (borrador)</button>
+            </form>
+
+            <div className="panel-sec-t">Registrar diagnóstico CIE-10</div>
+            <form onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); runClinical(() => api.addDiagnosis({ encounterId: fd.get('encounterId'), patientId: summaryPatient, diagnosisCatalogId: dxId, diagnosisType: fd.get('diagnosisType'), certainty: fd.get('certainty'), notes: fd.get('notes') || null }), f); }}>
+              <div className="fields-grid">
+                <label className="field"><span>Atención</span><select name="encounterId" required key={`dx-enc-${summaryPatient}`}><option value="">Seleccionar…</option>{clinicalEncounters.map(e2 => <option key={e2.id} value={e2.id}>{dt(e2.encounterDate)} · {pretty(e2.encounterType)}</option>)}</select></label>
+                <label className="field"><span>Buscar CIE-10</span><input value={dxQuery} onChange={e => void searchDiagnoses(e.target.value)} placeholder="Código o descripción" /></label>
+                <label className="field"><span>Diagnóstico</span><select value={dxId} onChange={e => setDxId(e.target.value)} required><option value="">Seleccionar…</option>{dxOptions.map((x: any) => <option key={x.id} value={x.id}>{x.code} · {x.description}</option>)}</select></label>
+                <label className="field"><span>Tipo</span><select name="diagnosisType"><option>PRIMARY</option><option>SECONDARY</option><option>DIFFERENTIAL</option></select></label>
+                <label className="field"><span>Certeza</span><select name="certainty"><option>CONFIRMED</option><option>SUSPECTED</option><option>RULED_OUT</option></select></label>
+                <label className="field" style={{ gridColumn: '1 / -1' }}><span>Notas</span><input name="notes" placeholder="Notas del diagnóstico" /></label>
+              </div>
+              <button className="btn" disabled={busy || !summaryPatient || !can('clinical.diagnoses.manage') || !dxId}><Ico name="clipboard" size={14} /> Agregar diagnóstico</button>
+            </form>
+
             <div className="panel-sec-t">Registrar signos vitales</div>
-            <form className="toolbar" onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); run(() => api.addVitals({ encounterId: fd.get('encounterId'), patientId: fd.get('patientId'), temperatureC: num(fd.get('temperatureC')), heartRate: int(fd.get('heartRate')), respiratoryRate: int(fd.get('respiratoryRate')), systolicBp: int(fd.get('systolicBp')), diastolicBp: int(fd.get('diastolicBp')), oxygenSaturation: num(fd.get('oxygenSaturation')), weightKg: num(fd.get('weightKg')), heightCm: num(fd.get('heightCm')), glucoseMgDl: num(fd.get('glucoseMgDl')), painScale: int(fd.get('painScale')), notes: fd.get('notes') || null }), f); }}>
-              <label className="field"><span>Paciente</span><select name="patientId" required><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
-              <label className="field" style={{ flex: '2 1 260px', maxWidth: 340 }}><span>Atención</span><select name="encounterId" required><option value="">Seleccionar…</option>{encounters.map(e2 => <option key={e2.id} value={e2.id}>{dt(e2.encounterDate)} · {pretty(e2.encounterType)}</option>)}</select></label>
+            <form className="toolbar" onSubmit={e => { e.preventDefault(); const f = e.currentTarget, fd = new FormData(f); runClinical(() => api.addVitals({ encounterId: fd.get('encounterId'), patientId: fd.get('patientId'), temperatureC: num(fd.get('temperatureC')), heartRate: int(fd.get('heartRate')), respiratoryRate: int(fd.get('respiratoryRate')), systolicBp: int(fd.get('systolicBp')), diastolicBp: int(fd.get('diastolicBp')), oxygenSaturation: num(fd.get('oxygenSaturation')), weightKg: num(fd.get('weightKg')), heightCm: num(fd.get('heightCm')), glucoseMgDl: num(fd.get('glucoseMgDl')), painScale: int(fd.get('painScale')), notes: fd.get('notes') || null }), f); }}>
+              <label className="field"><span>Paciente</span><select name="patientId" required key={`vitals-patient-${summaryPatient}`} defaultValue={summaryPatient}><option value="">Seleccionar…</option>{patients.map(p => <option key={p.id} value={p.id}>{p.fullName || p.lastName}</option>)}</select></label>
+              <label className="field" style={{ flex: '2 1 260px', maxWidth: 340 }}><span>Atención</span><select name="encounterId" required key={`vitals-enc-${summaryPatient}`}><option value="">Seleccionar…</option>{clinicalEncounters.map(e2 => <option key={e2.id} value={e2.id}>{dt(e2.encounterDate)} · {pretty(e2.encounterType)}</option>)}</select></label>
               <label className="field"><span>Temp °C</span><input name="temperatureC" placeholder="36.8" /></label>
               <label className="field"><span>FC</span><input name="heartRate" placeholder="72" /></label>
               <label className="field"><span>FR</span><input name="respiratoryRate" placeholder="16" /></label>
@@ -818,7 +941,10 @@ export default function App() {
               <label className="field"><span>SpO₂ %</span><input name="oxygenSaturation" placeholder="98" /></label>
               <label className="field"><span>Peso kg</span><input name="weightKg" placeholder="70" /></label>
               <label className="field"><span>Talla cm</span><input name="heightCm" placeholder="170" /></label>
-              <button className="btn" disabled={busy}><Ico name="activity" size={14} /> Registrar</button>
+              <label className="field"><span>Glucosa mg/dL</span><input name="glucoseMgDl" placeholder="90" /></label>
+              <label className="field"><span>Dolor 0-10</span><input name="painScale" type="number" min={0} max={10} /></label>
+              <label className="field" style={{ flex: '2 1 260px', maxWidth: 340 }}><span>Notas</span><input name="notes" placeholder="Observaciones" /></label>
+              <button className="btn" disabled={busy || !summaryPatient || !can('clinical.vitals.manage')}><Ico name="activity" size={14} /> Registrar</button>
             </form>
           </div>
         </section>}

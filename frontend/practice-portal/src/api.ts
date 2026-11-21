@@ -56,6 +56,21 @@ export const api = {
   addAllergy: (body: any) => req<any>('/api/v1/clinical/allergies', { method: 'POST', body: JSON.stringify(body) }),
   addHistory: (body: any) => req<any>('/api/v1/clinical/history', { method: 'POST', body: JSON.stringify(body) }),
   searchDx: (q: string) => req<any[]>(`/api/v1/clinical/diagnosis-catalog?q=${encodeURIComponent(q)}`),
+  addDiagnosis: (body: any) => req<any>('/api/v1/clinical/diagnoses', { method: 'POST', body: JSON.stringify(body) }),
+  clinicalRecord: (patientId: string) => req<any>(`/api/v1/patients/${patientId}/clinical-record`),
+  /** Descarga el PDF oficial de historia clínica (el hash SHA-256 viaja en X-Document-Sha256). */
+  clinicalRecordPdf: async (patientId: string): Promise<Blob> => {
+    const headers: Record<string, string> = {};
+    const token = getToken(); if (token) headers.Authorization = `Bearer ${token}`;
+    const tenant = localStorage.getItem('sigm_tenant'); if (tenant) headers['X-Tenant-Id'] = tenant;
+    const res = await fetch(`${API}/api/v1/patients/${patientId}/clinical-record/pdf`, { headers });
+    if (!res.ok) {
+      let message = `No fue posible generar el PDF (${res.status}).`;
+      try { const data = await res.json(); message = data?.message || data?.title || message; } catch { /* cuerpo no JSON */ }
+      throw new Error(message);
+    }
+    return res.blob();
+  },
   billingServices: () => req<any[]>('/api/v1/billing/services'),
   createBillingService: (body: any) => req<any>('/api/v1/billing/services', { method: 'POST', body: JSON.stringify(body) }),
   invoices: () => req<any[]>('/api/v1/billing/invoices'),

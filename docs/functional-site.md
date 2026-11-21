@@ -93,6 +93,17 @@ cd frontend/patient-portal;  npm run dev   # http://localhost:5175
 3. Navegar módulos: especialidades, usuarios, sedes/consultorios, profesionales, horarios (reglas/excepciones, consultar disponibilidad), pacientes, agenda/lista de espera/recordatorios, atenciones/notas, clínico (resumen, vitales, alergias, antecedentes), laboratorio, recetas, facturación/EPS/pagos, documentos, interoperabilidad y auditoría.
 4. También puede **crear una nueva organización** desde la pantalla de registro (genera tenant + admin + especialidades).
 
+### Flujo clínico en `/consultorios/` (médico)
+
+1. Abrir **SIGM Consultorios** (`https://hcmmedical.vercel.app/consultorios/`) e iniciar sesión con `doctor@demo.sigm.local` / `Doctor123!`, organización `CLINIC-DEMO`.
+2. Entrar en **Clínico** (`clinical.read`). Seleccionar un paciente (p. ej. Ana María Pérez) y pulsar **Cargar historia**.
+3. La vista muestra la identificación, las alertas de alergias, las atenciones con sus notas (incluidas firmas y adendas), la línea de tiempo clínica y las tablas de alergias, diagnósticos, signos vitales y antecedentes.
+4. Desde la misma pantalla se pueden registrar **notas** (borrador → **Firmar nota**, si se tiene `clinical.notes.sign`), **diagnósticos CIE-10**, **signos vitales**, **alergias** y **antecedentes**, y **firmar** las notas en borrador.
+5. **Historia clínica (PDF)** abre el snapshot oficial (JSON/PDF con hash SHA-256 en `X-Document-Sha256`); **Imprimir** genera el mismo contenido en una ventana de impresión.
+6. La firma de una nota crea una nueva versión firmada e inmutable y cambia su estado a `SIGNED`, cumpliendo el guard `sigm.fn_clinical_note_sign_guard()`. Las notas firmadas se corrigen con **adendas**, no se sobrescriben.
+
+> **Especialidades:** `GET/PUT /api/v1/specialties/tenant` requiere `tenant.specialties.read` / `tenant.specialties.manage`. `PHYSICIAN` no posee esos permisos, por lo que en `/consultorios/` el menú «Especialidades» no aparece para el médico y la acción de guardado queda deshabilitada. Para habilitar especialidades se debe ingresar con `admin@demo.sigm.local` (rol `CLINIC_ADMIN`, con ambos permisos) en `/app/`. Los roles válidos en el formulario de usuarios son los del catálogo (`PHYSICIAN`, `NURSE`, `RECEPTIONIST`, `BILLER`, `MEDICAL_DIRECTOR`, `LAB_STAFF`, `CLINIC_ADMIN`, `PRACTICE_OWNER`); los antiguos `DOCTOR`, `BILLING` y `TENANT_ADMIN` no existen y hacen fallar el alta.
+
 ### Panel superadmin oculto (soporte SaaS)
 - El usuario `soporte@sigm.cloud` (o cualquier cuenta con rol global `PLATFORM_ADMIN`) inicia sesión **sin necesidad de seleccionar un tenant**. El panel permite:
   - **Ver todos los tenants** activos/suspendidos con counts de pacientes, citas y planes.

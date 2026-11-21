@@ -20,12 +20,56 @@ public class ClinicalNotesController(TenantConnectionFactory db, ITenantContext 
     {
         if (tenant.TenantId is not Guid tid || tenant.UserId is not Guid uid) return BadRequest(new { message = "Contexto no resuelto." });
         await using var c = await db.OpenAsync(ct);
-        await using var cmd = new NpgsqlCommand(@"UPDATE sigm.clinical_notes SET status='SIGNED', signed_at=now(), signed_by=@uid, updated_at=now()
-                            WHERE id=@id AND tenant_id=@tid AND status='DRAFT'", c);
-        cmd.Parameters.AddWithValue("@id", id); cmd.Parameters.AddWithValue("@tid", tid); cmd.Parameters.AddWithValue("@uid", uid);
-        var n = await cmd.ExecuteNonQueryAsync(ct);
+        await using var tx = await c.BeginTransactionAsync(ct);
+
+        string? status;
+        int currentVersion;
+        string? content;
+        await using (var cmd = new NpgsqlCommand(@"SELECT n.status, n.current_version, v.content::text
+                            FROM sigm.clinical_notes n
+                            LEFT JOIN sigm.clinical_note_versions v
+                              ON v.tenant_id = n.tenant_id AND v.note_id = n.id AND v.version_number = n.current_version
+                            WHERE n.id = @id AND n.tenant_id = @tid", c, tx))
+        {
+            cmd.Parameters.AddWithValue("@id", id); cmd.Parameters.AddWithValue("@tid", tid);
+            await using var rd = await cmd.ExecuteReaderAsync(ct);
+            if (!await rd.ReadAsync(ct)) return NotFound();
+            status = rd.GetString(0);
+            currentVersion = rd.GetInt32(1);
+            content = rd.IsDBNull(2) ? null : rd.GetString(2);
+        }
+        if (status != "DRAFT") return BadRequest(new { message = "La nota no existe, no está en borrador o no puede firmarse." });
+
+        // sigm.fn_clinical_note_sign_guard() exige una version con signed_at antes de
+        // permitir el paso a SIGNED, y las versiones son inmutables. Se inserta una
+        // nueva version firmada (copia del contenido vigente) y luego se firma la cabecera.
+        var signedVersion = currentVersion + 1;
+        var signatureHash = Convert.ToHexString(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(content ?? "{}"))).ToLowerInvariant();
+        await using (var cmd = new NpgsqlCommand(@"INSERT INTO sigm.clinical_note_versions
+                            (id, tenant_id, note_id, version_number, content, author_user_id, signed_at, signature_hash)
+                            VALUES (gen_random_uuid(), @tid, @nid, @ver, @content::jsonb, @uid, now(), @hash)", c, tx))
+        {
+            cmd.Parameters.AddWithValue("@tid", tid);
+            cmd.Parameters.AddWithValue("@nid", id);
+            cmd.Parameters.AddWithValue("@ver", signedVersion);
+            cmd.Parameters.AddWithValue("@content", (object?)content ?? "{}");
+            cmd.Parameters.AddWithValue("@uid", uid);
+            cmd.Parameters.AddWithValue("@hash", signatureHash);
+            await cmd.ExecuteNonQueryAsync(ct);
+        }
+
+        int n;
+        await using (var cmd = new NpgsqlCommand(@"UPDATE sigm.clinical_notes SET status='SIGNED', signed_at=now(), signed_by=@uid, updated_at=now()
+                            WHERE id=@id AND tenant_id=@tid AND status='DRAFT'", c, tx))
+        {
+            cmd.Parameters.AddWithValue("@id", id); cmd.Parameters.AddWithValue("@tid", tid); cmd.Parameters.AddWithValue("@uid", uid);
+            n = await cmd.ExecuteNonQueryAsync(ct);
+        }
         if (n == 0) return BadRequest(new { message = "La nota no existe, no está en borrador o no puede firmarse." });
-        return Ok(new { id, status = "SIGNED" });
+        await tx.CommitAsync(ct);
+        return Ok(new { id, status = "SIGNED", currentVersion = signedVersion });
     }
 
     [HttpPost("{id:guid}/amendments")]
