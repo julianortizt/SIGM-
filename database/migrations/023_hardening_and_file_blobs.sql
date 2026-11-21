@@ -16,7 +16,9 @@ BEGIN;
 -- 1. Aislamiento de preferencias de usuario
 -- ----------------------------------------------------------------------------
 ALTER TABLE sigm.user_preferences ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sigm.user_preferences FORCE  ROW LEVEL SECURITY;
+-- NO se usa FORCE: la API se conecta con el rol propietario de la tabla en Neon
+-- y FORCE le aplicaría RLS sin policy propia (42501 al leer preferencias).
+ALTER TABLE sigm.user_preferences NO FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS user_preferences_tenant_isolation ON sigm.user_preferences;
 CREATE POLICY user_preferences_tenant_isolation ON sigm.user_preferences
@@ -25,6 +27,9 @@ CREATE POLICY user_preferences_tenant_isolation ON sigm.user_preferences
     WITH CHECK (tenant_id = sigm.current_tenant_id());
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON sigm.user_preferences TO sigm_app;
+-- La API usa sigm_platform (BYPASSRLS) como conexión por defecto: sin este GRANT
+-- /tenant-config/dashboard devolvía 42501 permission denied.
+GRANT SELECT, INSERT, UPDATE, DELETE ON sigm.user_preferences TO sigm_platform;
 
 -- ----------------------------------------------------------------------------
 -- 2. Tablas de plataforma: sigm_app solo puede leer lo que necesita
@@ -60,7 +65,7 @@ CREATE INDEX IF NOT EXISTS ix_file_blobs_tenant
     ON sigm.file_blobs (tenant_id, created_at DESC);
 
 ALTER TABLE sigm.file_blobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE sigm.file_blobs FORCE  ROW LEVEL SECURITY;
+ALTER TABLE sigm.file_blobs NO FORCE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS file_blobs_tenant_isolation ON sigm.file_blobs;
 CREATE POLICY file_blobs_tenant_isolation ON sigm.file_blobs

@@ -136,6 +136,47 @@ docker exec -i sigm-postgres psql -U postgres -d sigm_cloud_dev -v ON_ERROR_STOP
 ```
 Puertos: API 8080, clínica 3001, consultorio 3002, paciente 3003. Ajustar `VITE_API_URL`/conexiones según corresponda.
 
+## Auditoría exhaustiva y correcciones aplicadas (commit `4305d9f`)
+
+Se revisaron backend, los 5 frontends, la base de datos (migraciones 001–023, seeds) y el sitio en vivo. Hallazgos y correcciones:
+
+**Seguridad**
+- **Escalada de privilegios crítica**: `POST /api/v1/users` permitía a un `CLINIC_ADMIN` crear usuarios `PLATFORM_ADMIN`. Ahora se rechazan `PLATFORM_*` y cualquier rol con permisos `platform.%`; tampoco se pueden reutilizar correos de otra organización. El login de tenant filtra `platform.*` y el JWT de plataforma lleva el claim firmado `is_platform_admin`.
+- `GET /api/v1/platform/modules` exige `platform.tenants.manage` (antes era público).
+- Los mapeos FHIR dejaron de ser anónimos y se filtran por tenant.
+- Las listas de incidentes/autenticación no mezclan filas con `tenant_id IS NULL`.
+- Validación de sesión *fail-closed*: si la DB no responde, se deniega la petición.
+- `SqlScriptSafety` trata `EXECUTE`, `DO $$` y `FORMAT(` como destructivos (evita evasiones con SQL dinámico).
+- Rate limit de login/MFA por IP real del cliente (`X-Vercel-Forwarded-For`), no por la IP del proxy de Vercel.
+
+**Estabilidad y contratos**
+- `POST /laboratory/results` insertaba columnas inexistentes (`laboratory_order_item_id`, `result_unit`, …) → 500 garantizado. Ahora usa `order_item_id`, `unit`, `result_flag` y valida la propiedad del ítem.
+- Middleware global traduce errores de integridad PG a 4xx (`23505→409`, `23503/23514/22P02→400`).
+- `POST /specialty-forms/{id}/fields` valida el formulario y parsea `options`/`config` con seguridad.
+- `GET /clinical/patients/{id}/summary` devuelve claves camelCase y `createdAt` para la línea de tiempo.
+- Las notas de `GET /encounters/{id}/notes` incluyen `content`.
+- El snapshot de historia clínica ya no trunca diagnósticos, antecedentes, vitales ni adendas con `LIMIT`, y las adendas se filtran por paciente.
+- El historial de estados de cita ya no se duplica (lo registra el trigger).
+- Los pagos se registran en transacción con la actualización del saldo de la factura.
+- Mapeos EF corregidos a columnas reales (`organization_type`, `duration_minutes`).
+
+**Base de datos y despliegue**
+- Migración `023`: RLS en `user_preferences` y `file_blobs`, GRANTs a `sigm_platform`, REVOKE de DML a `sigm_app` en tablas de plataforma, índice de adendas y tabla `sigm.file_blobs`.
+- `Storage__Provider=Database` en Vercel: los documentos se guardan en Neon (el filesystem de una función serverless es efímero).
+- Contexto de tenant con `set_config(..., false)` y limpieza del pool (evita que una petición herede el tenant de otra).
+- CORS en producción por defecto `https://hcmmedical.vercel.app`; `ForwardLimit=1`.
+- Seed `seed_demo_clinical_details.sql`: corregida la doble codificación UTF-8 (`cutÃ¡neo` → `cutáneo`, `HipertensiÃ³n` → `Hipertensión`).
+- `seed_demo.sql` redirige a `seed_demo_full.sql` (el script antiguo estaba roto).
+- La migración 018 ya no restablece la contraseña demo del superadmin al repetir `run_all.sql`.
+
+**Frontends**
+- Expiración de sesión, `JSON.parse` seguro y cierre de sesión en 401 en los 4 portales.
+- Slots ocupados distinguibles de disponibles; etiqueta del paciente controlado en `PatientPicker`.
+- Avisos de fallos parciales en el portal de pacientes.
+- Escaped de comillas y `noopener` en la generación de HTML de historia clínica.
+- Enlaces de retorno al inicio respetan el `BASE_URL` de cada subpath.
+- Eliminado el código plantilla sin referencias de `sigm-welcome`.
+
 ## Notas de seguridad (dev vs prod)
 - En desarrollo se usa conexión `postgres` (superusuario) para facilitar el arranque; en producción debe usarse `sigm_app` (sujeto a RLS) con `set_config('app.tenant_id'/'app.user_id')` por transacción, secretos en vault, TLS, MFA/OIDC, rate-limit y remediación de vulnerabilidades.
 - Catálogos oficiales ya cargados (CIE-10/CUPS/IUM). Validación DB: `powershell -ExecutionPolicy Bypass -File database/scripts/validate.ps1 -Mode LocalServer -ServerPassword postgres`.
