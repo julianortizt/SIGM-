@@ -11,28 +11,44 @@
       "framework": "vite",
       "installCommand": "npm ci",
       "buildCommand": "VITE_API_URL=/api VITE_PRODUCT=CLINIC VITE_BRAND='SIGM Clínicas' npm run build",
-      "outputDirectory": "dist"
+      "outputDirectory": "dist",
+      "routes": [
+        { "src": "/app/(.*)", "dest": "/$1" },
+        { "src": "/app", "dest": "/" }
+      ]
     },
     "practice": {
       "root": "frontend/practice-portal",
       "framework": "vite",
       "installCommand": "npm ci",
       "buildCommand": "VITE_API_URL=/api VITE_PRODUCT=PRACTICE VITE_BRAND='SIGM Consultorios' npm run build",
-      "outputDirectory": "dist"
+      "outputDirectory": "dist",
+      "routes": [
+        { "src": "/consultorios/(.*)", "dest": "/$1" },
+        { "src": "/consultorios", "dest": "/" }
+      ]
     },
     "patient": {
       "root": "frontend/patient-portal",
       "framework": "vite",
       "installCommand": "npm ci",
       "buildCommand": "VITE_API_URL=/api VITE_PRODUCT=PATIENT VITE_BRAND='SIGM Pacientes' npm run build",
-      "outputDirectory": "dist"
+      "outputDirectory": "dist",
+      "routes": [
+        { "src": "/pacientes/(.*)", "dest": "/$1" },
+        { "src": "/pacientes", "dest": "/" }
+      ]
     },
     "admin": {
       "root": "frontend/sigm-admin",
       "framework": "vite",
       "installCommand": "npm ci",
       "buildCommand": "VITE_API_URL=/api npm run build",
-      "outputDirectory": "dist"
+      "outputDirectory": "dist",
+      "routes": [
+        { "src": "/admin/(.*)", "dest": "/$1" },
+        { "src": "/admin", "dest": "/" }
+      ]
     },
     "welcome": {
       "root": "frontend/sigm-welcome",
@@ -45,14 +61,14 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
     { "source": "/health(.*)", "destination": { "service": "api" } },
-    { "source": "/app", "destination": { "service": "clinic", "path": "/" } },
-    { "source": "/app/(.*)", "destination": { "service": "clinic", "path": "/$1" } },
-    { "source": "/consultorios", "destination": { "service": "practice", "path": "/" } },
-    { "source": "/consultorios/(.*)", "destination": { "service": "practice", "path": "/$1" } },
-    { "source": "/pacientes", "destination": { "service": "patient", "path": "/" } },
-    { "source": "/pacientes/(.*)", "destination": { "service": "patient", "path": "/$1" } },
-    { "source": "/admin", "destination": { "service": "admin", "path": "/" } },
-    { "source": "/admin/(.*)", "destination": { "service": "admin", "path": "/$1" } },
+    { "source": "/app/(.*)", "destination": { "service": "clinic" } },
+    { "source": "/app", "destination": { "service": "clinic" } },
+    { "source": "/consultorios/(.*)", "destination": { "service": "practice" } },
+    { "source": "/consultorios", "destination": { "service": "practice" } },
+    { "source": "/pacientes/(.*)", "destination": { "service": "patient" } },
+    { "source": "/pacientes", "destination": { "service": "patient" } },
+    { "source": "/admin/(.*)", "destination": { "service": "admin" } },
+    { "source": "/admin", "destination": { "service": "admin" } },
     { "source": "/(.*)", "destination": { "service": "welcome" } }
   ]
 }
