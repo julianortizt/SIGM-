@@ -16,11 +16,13 @@ $pg='C:\Program Files\PostgreSQL\18\bin'; $env:PGPASSWORD='postgres'
 ```
 
 ### Credenciales demo (CLINIC-DEMO)
-| Rol | Correo | Contraseña | Tenant ID |
+| Rol | Correo | Contraseña | Organización |
 |---|---|---|---|
-| Administrador (`CLINIC_ADMIN`, 60 permisos) | `admin@demo.sigm.local` | `Demo12345!` | `11111111-1111-4111-8111-111111111111` |
-| Médico (`PHYSICIAN`, 22 permisos) | `doctor@demo.sigm.local` | `Doctor123!` | `11111111-1111-4111-8111-111111111111` |
-| Recepción (`RECEPTIONIST`, 11 permisos) | `recepcion@demo.sigm.local` | `Recep123!` | `11111111-1111-4111-8111-111111111111` |
+| Administrador (`CLINIC_ADMIN`, 60 permisos) | `admin@demo.sigm.local` | `Demo12345!` | `CLINIC-DEMO` |
+| Médico (`PHYSICIAN`, 22 permisos) | `doctor@demo.sigm.local` | `Doctor123!` | `CLINIC-DEMO` |
+| Recepción (`RECEPTIONIST`, 11 permisos) | `recepcion@demo.sigm.local` | `Recep123!` | `CLINIC-DEMO` |
+
+> En el campo **Organización** del login se escribe el código corto `CLINIC-DEMO` (no distingue mayúsculas). El UUID interno `11111111-1111-4111-8111-111111111111` es solo la clave primaria en BD; el usuario nunca lo necesita. `Login` lo resuelve con `ResolveTenantAsync` y el front muestra el código en la insignia del tenant.
 
 > Los permisos viajan en el JWT (claims `permission`); tras cambiar roles/permisos en BD hay que re-iniciar sesión.
 
@@ -48,7 +50,7 @@ cd frontend/patient-portal;  npm run dev   # http://localhost:5175
 
 ### Uso rápido
 1. Abrir **SIGM Clínicas** (`clinic-portal`).
-2. Iniciar sesión con `admin@demo.sigm.local` / `Demo12345!` (Tenant ID: `11111111-1111-4111-8111-111111111111`).
+2. Iniciar sesión con `admin@demo.sigm.local` / `Demo12345!` y organización `CLINIC-DEMO`.
 3. Navegar módulos: especialidades, usuarios, sedes/consultorios, profesionales, horarios (reglas/excepciones, consultar disponibilidad), pacientes, agenda/lista de espera/recordatorios, atenciones/notas, clínico (resumen, vitales, alergias, antecedentes), laboratorio, recetas, facturación/EPS/pagos, documentos, interoperabilidad y auditoría.
 4. También puede **crear una nueva organización** desde la pantalla de registro (genera tenant + admin + especialidades).
 
