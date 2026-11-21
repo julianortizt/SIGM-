@@ -45,14 +45,26 @@
   "rewrites": [
     { "source": "/api/(.*)", "destination": { "service": "api" } },
     { "source": "/health(.*)", "destination": { "service": "api" } },
-    { "source": "/app", "destination": { "service": "clinic" } },
-    { "source": "/app/(.*)", "destination": { "service": "clinic" } },
-    { "source": "/consultorios", "destination": { "service": "practice" } },
-    { "source": "/consultorios/(.*)", "destination": { "service": "practice" } },
-    { "source": "/pacientes", "destination": { "service": "patient" } },
-    { "source": "/pacientes/(.*)", "destination": { "service": "patient" } },
-    { "source": "/admin", "destination": { "service": "admin" } },
-    { "source": "/admin/(.*)", "destination": { "service": "admin" } },
+    {
+      "source": "/app/:path*",
+      "destination": { "service": "clinic" },
+      "transforms": [{ "type": "request.path", "op": "set", "args": "/:path*" }]
+    },
+    {
+      "source": "/consultorios/:path*",
+      "destination": { "service": "practice" },
+      "transforms": [{ "type": "request.path", "op": "set", "args": "/:path*" }]
+    },
+    {
+      "source": "/pacientes/:path*",
+      "destination": { "service": "patient" },
+      "transforms": [{ "type": "request.path", "op": "set", "args": "/:path*" }]
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": { "service": "admin" },
+      "transforms": [{ "type": "request.path", "op": "set", "args": "/:path*" }]
+    },
     { "source": "/(.*)", "destination": { "service": "welcome" } }
   ]
 }
